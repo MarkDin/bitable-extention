@@ -1,0 +1,16 @@
+<svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100" height="100" rx="5" fill="#F7F8FA"/>
+  <path d="M50 75C63.8071 75 75 63.8071 75 50C75 36.1929 63.8071 25 50 25C36.1929 25 25 36.1929 25 50C25 63.8071 36.1929 75 50 75Z" fill="white" stroke="#E5E6EB" stroke-width="2"/>
+  <path d="M50 50L50 25" stroke="#E5E6EB" stroke-width="1"/>
+  <path d="M50 50L75 50" stroke="#E5E6EB" stroke-width="1"/>
+  <path d="M50 50L50 75" stroke="#E5E6EB" stroke-width="1"/>
+  <path d="M50 50L25 50" stroke="#E5E6EB" stroke-width="1"/>
+  <path d="M50 50L68.3013 31.6987" stroke="#E5E6EB" stroke-width="1"/>
+  <path d="M50 50L31.6987 31.6987" stroke="#E5E6EB" stroke-width="1"/>
+  <path d="M50 50L31.6987 68.3013" stroke="#E5E6EB" stroke-width="1"/>
+  <path d="M50 50L68.3013 68.3013" stroke="#E5E6EB" stroke-width="1"/>
+  <path d="M50 50V25C63.8071 25 75 36.1929 75 50H50Z" fill="#2E6BE0"/>
+  <path d="M50 50H75C75 63.8071 63.8071 75 50 75V50Z" fill="#00B42A"/>
+  <path d="M50 50V75C36.1929 75 25 63.8071 25 50H50Z" fill="#FF7D00"/>
+  <path d="M50 50H25C25 36.1929 36.1929 25 50 25V50Z" fill="#165DFF"/>
+</svg>
