@@ -16,16 +16,18 @@ const TabNavigation = () => {
     <div className="px-4 border-b border-[#E5E6EB]">
       <nav className="flex space-x-4">
         {tabs.map((tab) => (
-          <Link key={tab.path} href={tab.path}>
-            <a className={cn(
-              "py-3 text-sm font-medium",
-              currentPath === tab.path 
-                ? "border-b-2 border-primary text-primary" 
-                : "text-[#86909C]"
-            )}>
-              {tab.label}
-            </a>
-          </Link>
+          <div key={tab.path}>
+            <Link href={tab.path}>
+              <span className={cn(
+                "py-3 text-sm font-medium cursor-pointer inline-block",
+                currentPath === tab.path 
+                  ? "border-b-2 border-primary text-primary" 
+                  : "text-[#86909C]"
+              )}>
+                {tab.label}
+              </span>
+            </Link>
+          </div>
         ))}
       </nav>
     </div>
