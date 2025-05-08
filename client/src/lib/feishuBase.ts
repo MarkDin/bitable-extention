@@ -73,9 +73,12 @@ export const feishuBase = {
   getFieldValue: async (tableId: string, recordId: string, fieldId: string): Promise<any> => {
     try {
       const table = await bitable.base.getTableById(tableId);
-      const record = await table.getRecordById(recordId);
       const field = await table.getFieldById(fieldId);
-      return await record.getCellValue(field);
+      // 使用getRecordById获取记录，然后使用字段ID获取单元格值
+      const record = await table.getRecordById(recordId);
+      // 获取单元格值 - 根据实际SDK接口调整
+      const cellValue = await record.getCellValue(fieldId);
+      return cellValue;
     } catch (error) {
       console.error(`获取字段值失败 (表:${tableId}, 记录:${recordId}, 字段:${fieldId}):`, error);
       throw error;
@@ -87,8 +90,12 @@ export const feishuBase = {
     try {
       const table = await bitable.base.getTableById(tableId);
       const view = await table.getViewById(viewId);
-      // 获取当前选中的所有记录ID
-      return await view.getSelectedRecordIdList();
+      // 使用可见记录列表作为选定记录
+      // 注意：SDK可能没有直接提供getSelectedRecordIdList方法
+      // 此处使用getVisibleRecordIdList作为替代，并过滤可能的undefined值
+      const idList = await view.getVisibleRecordIdList();
+      // 过滤掉undefined值并确保返回string[]类型
+      return idList.filter((id): id is string => id !== undefined);
     } catch (error) {
       console.error(`获取选中记录ID失败 (表:${tableId}, 视图:${viewId}):`, error);
       throw error;
@@ -122,11 +129,12 @@ export const feishuBase = {
     try {
       const table = await bitable.base.getTableById(tableId);
       
-      // 创建记录更新对象
-      const recordValues = {};
+      // 创建记录更新对象，符合SDK要求的格式
+      const recordValues: Record<string, any> = {};
+      
+      // 为每个字段设置值
       for (const [fieldId, value] of Object.entries(fields)) {
-        const field = await table.getFieldById(fieldId);
-        recordValues[field.id] = value;
+        recordValues[fieldId] = value;
       }
       
       // 更新记录

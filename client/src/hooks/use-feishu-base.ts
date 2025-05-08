@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { feishuBase, Selection, User } from '@/lib/feishuBase';
-import { bitable, ITable, IFieldMeta, IRecordValue } from '@lark-base-open/js-sdk';
+import { bitable, ITable, IFieldMeta, IRecordValue, IRecordList } from '@lark-base-open/js-sdk';
 
 export function useFeishuBase() {
   const [activeTable, setActiveTable] = useState<ITable | null>(null);
   const [recordFields, setRecordFields] = useState<IFieldMeta[]>([]);
-  const [records, setRecords] = useState<IRecordValue[]>([]);
+  const [records, setRecords] = useState<any[]>([]);
   const [selection, setSelection] = useState<Selection | null>(null);
-  const [selectedCellValue, setSelectedCellValue] = useState<string | null>(null);
+  const [selectedCellValue, setSelectedCellValue] = useState<any>(null);
   const [selectedRecordIds, setSelectedRecordIds] = useState<string[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -31,9 +31,11 @@ export function useFeishuBase() {
         const fields = await feishuBase.getFields(table.id);
         setRecordFields(fields);
 
-        // Get records
+        // Get records - 转换为数组形式
         const tableRecords = await feishuBase.getRecords(table.id);
-        setRecords(tableRecords);
+        // 注意：这里我们将IRecordList类型的对象转换为数组形式
+        const recordsArray = tableRecords ? Array.from(tableRecords) : [];
+        setRecords(recordsArray);
 
         // Get current selection
         const currentSelection = await feishuBase.getSelection();

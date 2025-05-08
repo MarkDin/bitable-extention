@@ -3,6 +3,7 @@ import TabNavigation from "./TabNavigation";
 import { Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
+import { UserInfo } from "./UserInfo";
 
 interface PluginLayoutProps {
   children: React.ReactNode;
@@ -29,8 +30,13 @@ const PluginLayout: React.FC<PluginLayoutProps> = ({ children }) => {
       {/* Tab Navigation */}
       <TabNavigation />
 
+      {/* User Info */}
+      <div className="px-4 pt-4">
+        <UserInfo />
+      </div>
+
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto px-4">
         {children}
       </main>
     </div>
