@@ -18,6 +18,14 @@ export interface Record {
   fields: { [key: string]: any };
 }
 
+export interface Selection {
+  baseId: string | null;
+  tableId: string | null;
+  fieldId: string | null;
+  viewId: string | null;
+  recordId: string | null;
+}
+
 // Mock implementation of Feishu Base JS SDK for development
 export const feishuBase = {
   // Get active table
@@ -28,6 +36,46 @@ export const feishuBase = {
       id: "tbl1",
       name: "客户管理表"
     };
+  },
+
+  // Get current selection
+  getSelection: async (): Promise<Selection> => {
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return {
+      baseId: "bseDEF456",
+      tableId: "tbl1",
+      fieldId: "fld2",
+      viewId: "viw1",
+      recordId: "rec1"
+    };
+  },
+
+  // Get field value from a specific record
+  getFieldValue: async (tableId: string, recordId: string, fieldId: string): Promise<any> => {
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Mock data for different fields
+    const fieldValues: {[key: string]: any} = {
+      "fld1": "字节跳动有限公司",
+      "fld2": "91110108XXXXX123XX",
+      "fld3": "91110108123456",
+      "fld4": "张三",
+      "fld5": "1亿美元",
+      "fld6": "北京市海淀区",
+      "fld7": "2012-03-09",
+      "fld8": "互联网软件与服务"
+    };
+    
+    return fieldValues[fieldId] || null;
+  },
+
+  // Get selected record IDs (for table views)
+  getSelectedRecordIdList: async (tableId: string, viewId: string): Promise<string[]> => {
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return ["rec1"];
   },
 
   // Get fields from a table

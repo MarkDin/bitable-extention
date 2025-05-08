@@ -53,6 +53,14 @@ export const searchRequestSchema = z.object({
   query: z.string().min(1),
   field: z.string().min(1),
   apiConfigId: z.number(),
+  // Optional selection information
+  selection: z.object({
+    baseId: z.string().nullable().optional(),
+    tableId: z.string().nullable().optional(),
+    fieldId: z.string().nullable().optional(),
+    viewId: z.string().nullable().optional(),
+    recordId: z.string().nullable().optional(),
+  }).optional(),
 });
 
 export const updateRequestSchema = z.object({
@@ -61,10 +69,21 @@ export const updateRequestSchema = z.object({
   primaryKeyValue: z.string().min(1),
   apiConfigId: z.number(),
   mappings: z.array(z.object({
+    id: z.number().optional(),
     sourceField: z.string(),
     targetField: z.string(),
     isActive: z.boolean(),
   })),
+  // Optional field values that will be updated
+  fieldValues: z.record(z.string(), z.any()).optional(),
+  // Optional selection information
+  selection: z.object({
+    baseId: z.string().nullable().optional(),
+    tableId: z.string().nullable().optional(),
+    fieldId: z.string().nullable().optional(),
+    viewId: z.string().nullable().optional(),
+    recordId: z.string().nullable().optional(),
+  }).optional(),
 });
 
 // Define types

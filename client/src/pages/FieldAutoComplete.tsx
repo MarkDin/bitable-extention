@@ -15,7 +15,15 @@ import bytedanceLogo from "../assets/tech-logos/bytedance.svg";
 
 const FieldAutoComplete = () => {
   const { toast } = useToast();
-  const { activeTable, recordFields, loading: feishuLoading } = useFeishuBase();
+  const { 
+    activeTable, 
+    recordFields, 
+    selection, 
+    selectedCellValue, 
+    selectedRecordIds,
+    refreshSelection,
+    loading: feishuLoading 
+  } = useFeishuBase();
   
   const [queryField, setQueryField] = useState<string>("");
   const [dataSource, setDataSource] = useState<number>(1);
@@ -25,7 +33,7 @@ const FieldAutoComplete = () => {
   const [searchPerformed, setSearchPerformed] = useState(false);
   
   // Fetch API configurations
-  const { data: configData } = useQuery({
+  const { data: configData } = useQuery<{ configurations: Array<{id: number, name: string}> }>({
     queryKey: ["/api/configurations"],
     enabled: !feishuLoading,
   });
@@ -40,6 +48,26 @@ const FieldAutoComplete = () => {
     },
     enabled: !!dataSource,
   });
+  
+  // Set queryField and searchQuery from selection when available
+  useEffect(() => {
+    if (selection?.fieldId && selectedCellValue) {
+      setQueryField(selection.fieldId);
+      setSearchQuery(selectedCellValue);
+    }
+  }, [selection, selectedCellValue]);
+  
+  // Update mappings when fetched
+  useEffect(() => {
+    if (mappingsData?.mappings) {
+      setMappings(mappingsData.mappings.map((m: any) => ({
+        id: m.id,
+        sourceField: m.source_field,
+        targetField: m.target_field,
+        isActive: m.is_active
+      })));
+    }
+  }, [mappingsData]);
   
   // Search mutation
   const { mutate: searchMutate, isPending: isSearching } = useMutation({
@@ -71,7 +99,7 @@ const FieldAutoComplete = () => {
   const { mutate: applyUpdate, isPending: isUpdating } = useMutation({
     mutationFn: async () => {
       return apiRequest("POST", "/api/update", {
-        recordId: "placeholder-record-id",
+        recordId: selection?.recordId || selectedRecordIds[0] || "placeholder-record-id",
         primaryKey: queryField,
         primaryKeyValue: searchQuery,
         apiConfigId: dataSource,
@@ -94,18 +122,6 @@ const FieldAutoComplete = () => {
     }
   });
   
-  // Update mappings when fetched
-  useEffect(() => {
-    if (mappingsData?.mappings) {
-      setMappings(mappingsData.mappings.map((m: any) => ({
-        id: m.id,
-        sourceField: m.source_field,
-        targetField: m.target_field,
-        isActive: m.is_active
-      })));
-    }
-  }, [mappingsData]);
-  
   // Handle toggling mapping active state
   const handleToggleMapping = (id: number, isActive: boolean) => {
     setMappings(mappings.map(m => 
@@ -119,13 +135,30 @@ const FieldAutoComplete = () => {
     industry: "互联网/科技服务",
     logo: bytedanceLogo,
     fields: [
-      { field: "法定代表人", oldValue: null, newValue: "张一鸣", status: "unchanged" },
-      { field: "注册资本", oldValue: "1亿美元", newValue: "3亿美元", status: "changed" },
-      { field: "注册地址", oldValue: null, newValue: "北京市海淀区知春路甲48号", status: "unchanged" },
-      { field: "成立日期", oldValue: null, newValue: "2012-03-09", status: "unchanged" },
-      { field: "经营范围", oldValue: null, newValue: "开发、设计、经营计算机软件；设计、制作、代理、发布广告；技术开发、技术转让、...", status: "added" },
+      { field: "法定代表人", oldValue: null, newValue: "张一鸣", status: "unchanged" as const },
+      { field: "注册资本", oldValue: "1亿美元", newValue: "3亿美元", status: "changed" as const },
+      { field: "注册地址", oldValue: null, newValue: "北京市海淀区知春路甲48号", status: "unchanged" as const },
+      { field: "成立日期", oldValue: null, newValue: "2012-03-09", status: "unchanged" as const },
+      { field: "经营范围", oldValue: null, newValue: "开发、设计、经营计算机软件；设计、制作、代理、发布广告；技术开发、技术转让、...", status: "added" as const },
     ]
   } : null;
+  
+  // Function to detect selection changes and update search query
+  const handleDetectSelection = async () => {
+    const value = await refreshSelection();
+    if (value) {
+      toast({
+        title: "已检测到选中单元格",
+        description: `字段: ${selection?.fieldId}, 值: ${value}`,
+      });
+    } else {
+      toast({
+        title: "未检测到选中单元格",
+        description: "请在表格中选择一个单元格",
+        variant: "destructive",
+      });
+    }
+  };
   
   const handleSearch = () => {
     if (!queryField || !searchQuery) {
@@ -162,6 +195,22 @@ const FieldAutoComplete = () => {
         {/* Instruction */}
         <div className="mb-4 p-3 bg-[#F2F3F5] rounded-md text-sm text-[#86909C]">
           选择一个记录的字段值作为查询条件，然后自动填充其它相关字段
+        </div>
+        
+        {/* Selection Detection */}
+        <div className="mb-6">
+          <Button 
+            onClick={handleDetectSelection}
+            variant="outline"
+            className="w-full mb-2"
+          >
+            检测当前选中单元格
+          </Button>
+          {selectedCellValue && (
+            <div className="text-sm text-[#165DFF] bg-[#E8F3FF] p-2 rounded">
+              已检测到选中: {selectedCellValue}
+            </div>
+          )}
         </div>
         
         {/* Field Selection Section */}
