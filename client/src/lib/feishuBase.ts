@@ -2,20 +2,11 @@
 // In a real implementation, we would import the actual SDK
 // import { bitable } from '@lark-base-open/js-sdk';
 
-export interface Table {
-  id: string;
-  name: string;
-}
+import { bitable } from '@lark-base-open/js-sdk';
 
-export interface Field {
-  id: string;
-  name: string;
-  type: string;
-}
-
-export interface Record {
-  id: string;
-  fields: { [key: string]: any };
+export interface User {
+  userId: string;
+  baseUserId: string;
 }
 
 export interface Selection {
@@ -26,113 +17,123 @@ export interface Selection {
   recordId: string | null;
 }
 
-export interface User {
-  userId: string;
-  baseUserId: string;
-}
-
-// Mock implementation of Feishu Base JS SDK for development
+// Real implementation using Feishu Base JS SDK
 export const feishuBase = {
   // Get current user info
   getCurrentUser: async (): Promise<User> => {
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return {
-      userId: "u_123456", // 旧的API返回的用户ID（不推荐使用）
-      baseUserId: "bu_789012" // 推荐使用的用户ID
-    };
+    try {
+      // 使用新的推荐API获取baseUserId
+      const baseUserId = await bitable.bridge.getBaseUserId();
+      // 为了后向兼容也获取userId（不推荐使用）
+      let userId;
+      try {
+        userId = await bitable.bridge.getUserId();
+      } catch (error) {
+        userId = "not-available"; // 如果旧API被完全弃用可能会抛出错误
+      }
+      
+      return {
+        userId,
+        baseUserId
+      };
+    } catch (error) {
+      console.error("获取用户信息失败:", error);
+      throw error;
+    }
   },
   
   // Get active table
-  getActiveTable: async (): Promise<Table> => {
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return {
-      id: "tbl1",
-      name: "客户管理表"
-    };
+  getActiveTable: async () => {
+    try {
+      return await bitable.base.getActiveTable();
+    } catch (error) {
+      console.error("获取当前表格失败:", error);
+      throw error;
+    }
   },
 
   // Get current selection
   getSelection: async (): Promise<Selection> => {
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return {
-      baseId: "bseDEF456",
-      tableId: "tbl1",
-      fieldId: "fld2",
-      viewId: "viw1",
-      recordId: "rec1"
-    };
+    try {
+      const selection = await bitable.base.getSelection();
+      return {
+        baseId: selection.baseId || null,
+        tableId: selection.tableId || null,
+        fieldId: selection.fieldId || null,
+        viewId: selection.viewId || null,
+        recordId: selection.recordId || null
+      };
+    } catch (error) {
+      console.error("获取当前选择失败:", error);
+      throw error;
+    }
   },
 
   // Get field value from a specific record
   getFieldValue: async (tableId: string, recordId: string, fieldId: string): Promise<any> => {
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Mock data for different fields
-    const fieldValues: {[key: string]: any} = {
-      "fld1": "字节跳动有限公司",
-      "fld2": "91110108XXXXX123XX",
-      "fld3": "91110108123456",
-      "fld4": "张三",
-      "fld5": "1亿美元",
-      "fld6": "北京市海淀区",
-      "fld7": "2012-03-09",
-      "fld8": "互联网软件与服务"
-    };
-    
-    return fieldValues[fieldId] || null;
+    try {
+      const table = await bitable.base.getTableById(tableId);
+      const record = await table.getRecordById(recordId);
+      const field = await table.getFieldById(fieldId);
+      return await record.getCellValue(field);
+    } catch (error) {
+      console.error(`获取字段值失败 (表:${tableId}, 记录:${recordId}, 字段:${fieldId}):`, error);
+      throw error;
+    }
   },
 
   // Get selected record IDs (for table views)
   getSelectedRecordIdList: async (tableId: string, viewId: string): Promise<string[]> => {
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return ["rec1"];
+    try {
+      const table = await bitable.base.getTableById(tableId);
+      const view = await table.getViewById(viewId);
+      // 获取当前选中的所有记录ID
+      return await view.getSelectedRecordIdList();
+    } catch (error) {
+      console.error(`获取选中记录ID失败 (表:${tableId}, 视图:${viewId}):`, error);
+      throw error;
+    }
   },
 
   // Get fields from a table
-  getFields: async (tableId: string): Promise<Field[]> => {
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return [
-      { id: "fld1", name: "公司名称", type: "text" },
-      { id: "fld2", name: "统一社会信用代码", type: "text" },
-      { id: "fld3", name: "营业执照号码", type: "text" },
-      { id: "fld4", name: "联系人", type: "text" },
-      { id: "fld5", name: "资金规模", type: "text" },
-      { id: "fld6", name: "办公地址", type: "text" },
-      { id: "fld7", name: "成立时间", type: "date" },
-      { id: "fld8", name: "业务描述", type: "text" }
-    ];
+  getFields: async (tableId: string) => {
+    try {
+      const table = await bitable.base.getTableById(tableId);
+      return await table.getFieldMetaList();
+    } catch (error) {
+      console.error(`获取字段列表失败 (表:${tableId}):`, error);
+      throw error;
+    }
   },
 
   // Get records from a table
-  getRecords: async (tableId: string): Promise<Record[]> => {
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return [
-      {
-        id: "rec1",
-        fields: {
-          "fld1": "字节跳动有限公司",
-          "fld2": "91110108XXXXX123XX",
-          "fld4": "张三",
-          "fld5": "1亿美元",
-          "fld6": "北京市海淀区",
-          "fld7": "2012-03-09"
-        }
-      }
-    ];
+  getRecords: async (tableId: string) => {
+    try {
+      const table = await bitable.base.getTableById(tableId);
+      return await table.getRecordList();
+    } catch (error) {
+      console.error(`获取记录列表失败 (表:${tableId}):`, error);
+      throw error;
+    }
   },
 
   // Update a record
   updateRecord: async (tableId: string, recordId: string, fields: { [key: string]: any }): Promise<void> => {
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    // In a real implementation, this would update the record
-    console.log(`Updating record ${recordId} in table ${tableId} with fields:`, fields);
+    try {
+      const table = await bitable.base.getTableById(tableId);
+      
+      // 创建记录更新对象
+      const recordValues = {};
+      for (const [fieldId, value] of Object.entries(fields)) {
+        const field = await table.getFieldById(fieldId);
+        recordValues[field.id] = value;
+      }
+      
+      // 更新记录
+      await table.setRecord(recordId, recordValues);
+    } catch (error) {
+      console.error(`更新记录失败 (表:${tableId}, 记录:${recordId}):`, error);
+      throw error;
+    }
   }
 };

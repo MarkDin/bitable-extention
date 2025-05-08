@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { feishuBase, Table, Field, Record, Selection, User } from '@/lib/feishuBase';
+import { feishuBase, Selection, User } from '@/lib/feishuBase';
+import { bitable, ITable, IFieldMeta, IRecordValue } from '@lark-base-open/js-sdk';
 
 export function useFeishuBase() {
-  const [activeTable, setActiveTable] = useState<Table | null>(null);
-  const [recordFields, setRecordFields] = useState<Field[]>([]);
-  const [records, setRecords] = useState<Record[]>([]);
+  const [activeTable, setActiveTable] = useState<ITable | null>(null);
+  const [recordFields, setRecordFields] = useState<IFieldMeta[]>([]);
+  const [records, setRecords] = useState<IRecordValue[]>([]);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [selectedCellValue, setSelectedCellValue] = useState<string | null>(null);
   const [selectedRecordIds, setSelectedRecordIds] = useState<string[]>([]);
