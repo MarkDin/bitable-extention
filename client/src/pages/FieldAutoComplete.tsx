@@ -1,55 +1,59 @@
-import React, { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import ActionButtons from "@/components/ActionButtons";
+import DataPreview from "@/components/DataPreview";
+import FieldMapping, { Mapping } from "@/components/FieldMapping";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import FieldMapping, { Mapping } from "@/components/FieldMapping";
-import DataPreview from "@/components/DataPreview";
-import ActionButtons from "@/components/ActionButtons";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UserInfo } from "@/components/UserInfo";
 import { useFeishuBase } from "@/hooks/use-feishu-base";
-import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { apiService } from "@/lib/apiService";
+import { createResponse } from "@/lib/queryClient";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import bytedanceLogo from "../assets/tech-logos/bytedance.svg";
 
 const FieldAutoComplete = () => {
   const { toast } = useToast();
-  const { 
-    activeTable, 
-    recordFields, 
-    selection, 
-    selectedCellValue, 
+  const {
+    // activeTable 未使用，但保留注释以便将来可能的使用
+    recordFields,
+    selection,
+    selectedCellValue,
     selectedRecordIds,
     refreshSelection,
-    loading: feishuLoading 
+    loading: feishuLoading
   } = useFeishuBase();
-  
+
   const [queryField, setQueryField] = useState<string>("");
   const [dataSource, setDataSource] = useState<number>(1);
   const [isEditMappingOpen, setIsEditMappingOpen] = useState(false);
   const [mappings, setMappings] = useState<Mapping[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [searchPerformed, setSearchPerformed] = useState(false);
-  
-  // Fetch API configurations
+
+  // 直接从apiService获取API配置
   const { data: configData } = useQuery<{ configurations: Array<{id: number, name: string}> }>({
-    queryKey: ["/api/configurations"],
+    queryKey: ["configurations"],
+    queryFn: async () => {
+      const configs = await apiService.getApiConfigurations();
+      return { configurations: configs };
+    },
     enabled: !feishuLoading,
   });
-  
-  // Fetch field mappings when dataSource changes
-  const { data: mappingsData, isLoading: isMappingsLoading } = useQuery({
-    queryKey: ["/api/configurations", dataSource, "mappings"],
+
+  // 直接从apiService获取字段映射
+  const { data: mappingsData } = useQuery({
+    queryKey: ["mappings", dataSource],
     queryFn: async () => {
-      const res = await fetch(`/api/configurations/${dataSource}/mappings`);
-      if (!res.ok) throw new Error("Failed to fetch mappings");
-      return res.json();
+      const mappings = await apiService.getFieldMappings(dataSource);
+      return { mappings };
     },
     enabled: !!dataSource,
   });
-  
+
   // Set queryField and searchQuery from selection when available
   useEffect(() => {
     if (selection?.fieldId && selectedCellValue) {
@@ -57,7 +61,7 @@ const FieldAutoComplete = () => {
       setSearchQuery(selectedCellValue);
     }
   }, [selection, selectedCellValue]);
-  
+
   // Update mappings when fetched
   useEffect(() => {
     if (mappingsData?.mappings) {
@@ -69,19 +73,19 @@ const FieldAutoComplete = () => {
       })));
     }
   }, [mappingsData]);
-  
-  // Search mutation
+
+  // 搜索变更 - 直接使用apiService
   const { mutate: searchMutate, isPending: isSearching } = useMutation({
     mutationFn: async () => {
-      return apiRequest("POST", "/api/search", {
+      const result = await apiService.search({
         query: searchQuery,
         field: queryField,
         apiConfigId: dataSource,
         selection: selection || undefined
       });
+      return createResponse(result);
     },
-    onSuccess: async (res) => {
-      const data = await res.json();
+    onSuccess: () => {
       setSearchPerformed(true);
       toast({
         title: "搜索完成",
@@ -96,11 +100,11 @@ const FieldAutoComplete = () => {
       });
     }
   });
-  
-  // Apply updates mutation
+
+  // 应用更新变更 - 直接使用apiService
   const { mutate: applyUpdate, isPending: isUpdating } = useMutation({
     mutationFn: async () => {
-      return apiRequest("POST", "/api/update", {
+      const result = await apiService.update({
         recordId: selection?.recordId || selectedRecordIds[0] || "placeholder-record-id",
         primaryKey: queryField,
         primaryKeyValue: searchQuery,
@@ -108,9 +112,9 @@ const FieldAutoComplete = () => {
         mappings: mappings.filter(m => m.isActive),
         selection: selection || undefined
       });
+      return createResponse(result);
     },
-    onSuccess: async (res) => {
-      const data = await res.json();
+    onSuccess: () => {
       toast({
         title: "更新成功",
         description: "所有选定字段已更新",
@@ -124,14 +128,14 @@ const FieldAutoComplete = () => {
       });
     }
   });
-  
+
   // Handle toggling mapping active state
   const handleToggleMapping = (id: number, isActive: boolean) => {
-    setMappings(mappings.map(m => 
+    setMappings(mappings.map(m =>
       m.id === id ? { ...m, isActive } : m
     ));
   };
-  
+
   // Sample preview data - this would normally come from the API
   const previewData = searchPerformed ? {
     name: "字节跳动有限公司",
@@ -145,7 +149,7 @@ const FieldAutoComplete = () => {
       { field: "经营范围", oldValue: null, newValue: "开发、设计、经营计算机软件；设计、制作、代理、发布广告；技术开发、技术转让、...", status: "added" as const },
     ]
   } : null;
-  
+
   // Function to detect selection changes and update search query
   const handleDetectSelection = async () => {
     const value = await refreshSelection();
@@ -154,19 +158,19 @@ const FieldAutoComplete = () => {
         title: "已检测到选中单元格",
         description: `字段: ${selection?.fieldId}, 值: ${value}`,
       });
-      
+
       // If we have both field and value, auto search
       if (selection?.fieldId && value) {
         // Check if the field has changed
         if (queryField !== selection.fieldId) {
           setQueryField(selection.fieldId);
         }
-        
+
         // If search term is different, update it
         if (searchQuery !== value) {
           setSearchQuery(value);
         }
-        
+
         // Auto-search if field and value are valid and there's a change
         if (selection.fieldId && value && dataSource) {
           searchMutate();
@@ -180,7 +184,7 @@ const FieldAutoComplete = () => {
       });
     }
   };
-  
+
   const handleSearch = () => {
     if (!queryField || !searchQuery) {
       toast({
@@ -192,12 +196,12 @@ const FieldAutoComplete = () => {
     }
     searchMutate();
   };
-  
+
   const handleCancel = () => {
     setSearchQuery("");
     setSearchPerformed(false);
   };
-  
+
   const handleApply = () => {
     if (!searchPerformed) {
       toast({
@@ -209,21 +213,21 @@ const FieldAutoComplete = () => {
     }
     applyUpdate();
   };
-  
+
   return (
     <>
       <div className="p-4">
         {/* 用户信息 */}
         <UserInfo />
-        
+
         {/* Instruction */}
         <div className="mb-4 p-3 bg-[#F2F3F5] rounded-md text-sm text-[#86909C]">
           选择一个记录的字段值作为查询条件，然后自动填充其它相关字段
         </div>
-        
+
         {/* Selection Detection */}
         <div className="mb-6">
-          <Button 
+          <Button
             onClick={handleDetectSelection}
             variant={selectedCellValue ? "default" : "outline"}
             className="w-full mb-2"
@@ -247,7 +251,7 @@ const FieldAutoComplete = () => {
             </div>
           )}
         </div>
-        
+
         {/* Field Selection Section */}
         <div className="mb-6">
           <div className="mb-1 text-sm font-medium flex items-center">
@@ -262,8 +266,8 @@ const FieldAutoComplete = () => {
             </SelectTrigger>
             <SelectContent>
               {recordFields.map((field) => (
-                <SelectItem 
-                  key={field.id} 
+                <SelectItem
+                  key={field.id}
                   value={field.id}
                   className={field.id === selection?.fieldId ? "text-[#165DFF] font-medium" : ""}
                 >
@@ -278,7 +282,7 @@ const FieldAutoComplete = () => {
             </SelectContent>
           </Select>
         </div>
-        
+
         {/* Search Query Input */}
         <div className="mb-6">
           <div className="mb-1 text-sm font-medium flex items-center">
@@ -288,7 +292,7 @@ const FieldAutoComplete = () => {
             )}
           </div>
           <div className="flex space-x-2">
-            <Input 
+            <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="输入要搜索的值"
@@ -299,7 +303,7 @@ const FieldAutoComplete = () => {
             </Button>
           </div>
         </div>
-        
+
         {/* Data Source Section */}
         <div className="mb-6">
           <div className="mb-1 text-sm font-medium">数据源</div>
@@ -321,31 +325,31 @@ const FieldAutoComplete = () => {
             </SelectContent>
           </Select>
         </div>
-        
+
         {/* Field Mapping */}
-        <FieldMapping 
+        <FieldMapping
           mappings={mappings}
           onToggle={handleToggleMapping}
           onEditMappings={() => setIsEditMappingOpen(true)}
         />
       </div>
-      
+
       {/* Data Preview */}
-      <DataPreview 
+      <DataPreview
         data={previewData}
         isLoading={isSearching}
       />
-      
+
       {/* Footer */}
       <footer className="px-4 py-3 border-t border-[#E5E6EB]">
-        <ActionButtons 
+        <ActionButtons
           onCancel={handleCancel}
           onApply={handleApply}
           isLoading={isUpdating}
           applyText="应用更新"
         />
       </footer>
-      
+
       {/* Edit Mapping Dialog */}
       <Dialog open={isEditMappingOpen} onOpenChange={setIsEditMappingOpen}>
         <DialogContent className="sm:max-w-md">

@@ -1,15 +1,16 @@
-import React, { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import FieldMapping, { Mapping } from "@/components/FieldMapping";
-import DataPreview, { FieldDiff } from "@/components/DataPreview";
 import ActionButtons from "@/components/ActionButtons";
+import DataPreview from "@/components/DataPreview";
+import FieldMapping, { Mapping } from "@/components/FieldMapping";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UserInfo } from "@/components/UserInfo";
 import { useFeishuBase } from "@/hooks/use-feishu-base";
-import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { apiService } from "@/lib/apiService";
+import { createResponse } from "@/lib/queryClient";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import bytedanceLogo from "../assets/tech-logos/bytedance.svg";
 
 // 定义API配置类型
@@ -38,43 +39,51 @@ interface FieldMappingData {
 
 const DataSync = () => {
   const { toast } = useToast();
-  const { activeTable, recordFields, loading: feishuLoading } = useFeishuBase();
-  
+  const {
+    // activeTable 未使用，但保留注释以便将来可能的使用
+    recordFields,
+    loading: feishuLoading
+  } = useFeishuBase();
+
   const [primaryKeyField, setPrimaryKeyField] = useState<string>("");
   const [dataSource, setDataSource] = useState<number>(1);
   const [apiEndpoint, setApiEndpoint] = useState<string>("https://api.example.com/company");
   const [mappings, setMappings] = useState<Mapping[]>([]);
+  // syncStarted 在UI中未直接使用，但在逻辑中需要
   const [syncStarted, setSyncStarted] = useState(false);
   const [syncCompleted, setSyncCompleted] = useState(false);
-  
-  // Fetch API configurations
+
+  // 直接从apiService获取API配置
   const { data: configData, isLoading: isLoadingConfigs } = useQuery<ConfigData>({
-    queryKey: ["/api/configurations"],
+    queryKey: ["configurations"],
+    queryFn: async () => {
+      const configs = await apiService.getApiConfigurations();
+      return { configurations: configs };
+    },
     enabled: !feishuLoading,
   });
-  
-  // Fetch field mappings when dataSource changes
-  const { data: mappingsData, isLoading: isMappingsLoading } = useQuery<FieldMappingData>({
-    queryKey: ["/api/configurations", dataSource, "mappings"],
+
+  // 直接从apiService获取字段映射
+  const { data: mappingsData } = useQuery<FieldMappingData>({
+    queryKey: ["mappings", dataSource],
     queryFn: async () => {
-      const res = await fetch(`/api/configurations/${dataSource}/mappings`);
-      if (!res.ok) throw new Error("Failed to fetch mappings");
-      return res.json();
+      const mappings = await apiService.getFieldMappings(dataSource);
+      return { mappings };
     },
     enabled: !!dataSource,
   });
-  
-  // Sync mutation
+
+  // 同步变更 - 直接使用apiService
   const { mutate: syncMutate, isPending: isSyncing } = useMutation({
     mutationFn: async () => {
-      return apiRequest("POST", "/api/search", {
+      const result = await apiService.search({
         query: "全部记录",
         field: primaryKeyField,
         apiConfigId: dataSource
       });
+      return createResponse(result);
     },
-    onSuccess: async (res) => {
-      const data = await res.json();
+    onSuccess: () => {
       setSyncStarted(true);
       setSyncCompleted(true);
       toast({
@@ -90,20 +99,20 @@ const DataSync = () => {
       });
     }
   });
-  
-  // Apply updates mutation
+
+  // 应用更新变更 - 直接使用apiService
   const { mutate: applyUpdate, isPending: isUpdating } = useMutation({
     mutationFn: async () => {
-      return apiRequest("POST", "/api/update", {
+      const result = await apiService.update({
         recordId: "placeholder-record-id",
         primaryKey: primaryKeyField,
         primaryKeyValue: "all-records",
         apiConfigId: dataSource,
         mappings: mappings.filter(m => m.isActive)
       });
+      return createResponse(result);
     },
-    onSuccess: async (res) => {
-      const data = await res.json();
+    onSuccess: () => {
       toast({
         title: "更新成功",
         description: "所有选定字段已更新",
@@ -119,7 +128,7 @@ const DataSync = () => {
       });
     }
   });
-  
+
   // Update mappings when fetched
   useEffect(() => {
     if (mappingsData?.mappings) {
@@ -131,27 +140,27 @@ const DataSync = () => {
       })));
     }
   }, [mappingsData]);
-  
+
   // Update API endpoint when data source changes
   useEffect(() => {
     // 确保configData存在并有configurations属性
-    const configurations = configData && 'configurations' in configData 
-      ? configData.configurations 
+    const configurations = configData && 'configurations' in configData
+      ? configData.configurations
       : [];
-    
+
     const config = configurations?.find((c: any) => c.id === dataSource);
     if (config) {
       setApiEndpoint(config.endpoint);
     }
   }, [dataSource, configData]);
-  
+
   // Handle toggling mapping active state
   const handleToggleMapping = (id: number, isActive: boolean) => {
-    setMappings(mappings.map(m => 
+    setMappings(mappings.map(m =>
       m.id === id ? { ...m, isActive } : m
     ));
   };
-  
+
   // Sample preview data - this would normally come from the API
   const previewData = syncCompleted ? {
     name: "字节跳动有限公司",
@@ -165,7 +174,7 @@ const DataSync = () => {
       { field: "经营范围", oldValue: null, newValue: "开发、设计、经营计算机软件；设计、制作、代理、发布广告；技术开发、技术转让、...", status: "added" as const },
     ]
   } : null;
-  
+
   const handleSync = () => {
     if (!primaryKeyField) {
       toast({
@@ -177,12 +186,12 @@ const DataSync = () => {
     }
     syncMutate();
   };
-  
+
   const handleCancel = () => {
     setSyncStarted(false);
     setSyncCompleted(false);
   };
-  
+
   const handleApply = () => {
     if (!syncCompleted) {
       toast({
@@ -194,18 +203,18 @@ const DataSync = () => {
     }
     applyUpdate();
   };
-  
+
   return (
     <>
       <div className="p-4">
         {/* 用户信息 */}
         <UserInfo />
-        
+
         {/* Instruction */}
         <div className="mb-4 p-3 bg-[#F2F3F5] rounded-md text-sm text-[#86909C]">
           根据主键字段同步更新已有记录，确保数据保持最新
         </div>
-        
+
         {/* Primary Key Selection */}
         <div className="mb-6">
           <div className="mb-1 text-sm font-medium">主键字段</div>
@@ -227,7 +236,7 @@ const DataSync = () => {
             </SelectContent>
           </Select>
         </div>
-        
+
         {/* Data Source Selection */}
         <div className="mb-6">
           <div className="mb-1 text-sm font-medium">数据源</div>
@@ -236,7 +245,7 @@ const DataSync = () => {
               <SelectValue placeholder="选择数据源" />
             </SelectTrigger>
             <SelectContent>
-              {configData && 'configurations' in configData && 
+              {configData && 'configurations' in configData &&
                 configData.configurations.map((config: any) => (
                   <SelectItem key={config.id} value={config.id.toString()}>
                     {config.name}
@@ -251,12 +260,12 @@ const DataSync = () => {
             </SelectContent>
           </Select>
         </div>
-        
+
         {/* API Endpoint */}
         <div className="mb-6">
           <div className="mb-1 text-sm font-medium">API端点</div>
           <div className="flex space-x-2">
-            <Input 
+            <Input
               value={apiEndpoint}
               onChange={(e) => setApiEndpoint(e.target.value)}
               placeholder="API 端点 URL"
@@ -268,24 +277,24 @@ const DataSync = () => {
             </Button>
           </div>
         </div>
-        
+
         {/* Field Mapping */}
-        <FieldMapping 
+        <FieldMapping
           mappings={mappings}
           onToggle={handleToggleMapping}
           onEditMappings={() => {}}
         />
       </div>
-      
+
       {/* Data Preview */}
-      <DataPreview 
+      <DataPreview
         data={previewData}
         isLoading={isSyncing}
       />
-      
+
       {/* Footer */}
       <footer className="px-4 py-3 border-t border-[#E5E6EB]">
-        <ActionButtons 
+        <ActionButtons
           onCancel={handleCancel}
           onApply={handleApply}
           isLoading={isUpdating}
