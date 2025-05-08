@@ -12,6 +12,30 @@ import { useFeishuBase } from "@/hooks/use-feishu-base";
 import { apiRequest } from "@/lib/queryClient";
 import bytedanceLogo from "../assets/tech-logos/bytedance.svg";
 
+// 定义API配置类型
+interface ApiConfiguration {
+  id: number;
+  name: string;
+  endpoint: string;
+  auth_type: string;
+}
+
+// 定义配置数据的类型
+interface ConfigData {
+  configurations: ApiConfiguration[];
+}
+
+// 定义字段映射类型
+interface FieldMappingData {
+  mappings: Array<{
+    id: number;
+    api_configuration_id: number;
+    source_field: string;
+    target_field: string;
+    is_active: boolean;
+  }>;
+}
+
 const DataSync = () => {
   const { toast } = useToast();
   const { activeTable, recordFields, loading: feishuLoading } = useFeishuBase();
@@ -24,13 +48,13 @@ const DataSync = () => {
   const [syncCompleted, setSyncCompleted] = useState(false);
   
   // Fetch API configurations
-  const { data: configData } = useQuery({
+  const { data: configData, isLoading: isLoadingConfigs } = useQuery<ConfigData>({
     queryKey: ["/api/configurations"],
     enabled: !feishuLoading,
   });
   
   // Fetch field mappings when dataSource changes
-  const { data: mappingsData, isLoading: isMappingsLoading } = useQuery({
+  const { data: mappingsData, isLoading: isMappingsLoading } = useQuery<FieldMappingData>({
     queryKey: ["/api/configurations", dataSource, "mappings"],
     queryFn: async () => {
       const res = await fetch(`/api/configurations/${dataSource}/mappings`);
@@ -110,7 +134,12 @@ const DataSync = () => {
   
   // Update API endpoint when data source changes
   useEffect(() => {
-    const config = configData?.configurations?.find((c: any) => c.id === dataSource);
+    // 确保configData存在并有configurations属性
+    const configurations = configData && 'configurations' in configData 
+      ? configData.configurations 
+      : [];
+    
+    const config = configurations?.find((c: any) => c.id === dataSource);
     if (config) {
       setApiEndpoint(config.endpoint);
     }
@@ -207,14 +236,16 @@ const DataSync = () => {
               <SelectValue placeholder="选择数据源" />
             </SelectTrigger>
             <SelectContent>
-              {configData?.configurations?.map((config: any) => (
-                <SelectItem key={config.id} value={config.id.toString()}>
-                  {config.name}
-                </SelectItem>
-              ))}
-              {!configData && (
+              {configData && 'configurations' in configData && 
+                configData.configurations.map((config: any) => (
+                  <SelectItem key={config.id} value={config.id.toString()}>
+                    {config.name}
+                  </SelectItem>
+                ))
+              }
+              {(!configData || !('configurations' in configData) || configData.configurations.length === 0) && (
                 <SelectItem value="loading" disabled>
-                  加载中...
+                  {isLoadingConfigs ? "加载中..." : "无可用数据源"}
                 </SelectItem>
               )}
             </SelectContent>

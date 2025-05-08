@@ -116,7 +116,7 @@ export const getQueryFn: <T>(options: {
   on401: UnauthorizedBehavior;
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
-  async ({ queryKey }) => {
+  async <T>({ queryKey }) => {
     try {
       const url = queryKey[0] as string;
       const pathParts = url.split('/').filter(p => p);
