@@ -28,6 +28,34 @@ yarn
 
 ### 启动项目
 
+#### 纯前端模式（推荐）
+
+由于此插件已重构为纯前端实现，不再需要后端服务，推荐使用纯前端模式运行：
+
+**Windows系统**：
+```
+scripts\start-frontend-windows.bat
+```
+或者直接执行：
+```
+npx vite
+```
+
+**macOS/Linux系统**：
+```bash
+# 给脚本添加执行权限
+chmod +x scripts/start-frontend-unix.sh
+
+# 运行脚本
+./scripts/start-frontend-unix.sh
+```
+或者直接执行：
+```
+npx vite
+```
+
+#### 包含后端的旧模式（不再需要）
+
 ```bash
 npm run dev
 # 或
