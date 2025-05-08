@@ -76,7 +76,6 @@ export const feishuBase = {
       const field = await table.getFieldById(fieldId);
       
       // 获取单元格值 (兼容SDK不同版本)
-      // 方法1: 通过getCellByPositionAsync
       try {
         // 使用字段的属性获取单元格值
         const record = await table.getRecordById(recordId);
@@ -84,10 +83,51 @@ export const feishuBase = {
         
         // 如果可以直接访问字段
         if (fields[fieldId] !== undefined) {
-          return fields[fieldId];
+          const cellValue = fields[fieldId];
+          // 处理对象类型的字段值，提取文本内容
+          if (cellValue && typeof cellValue === 'object') {
+            // 处理 {type, text} 结构或其他特殊对象
+            if ('text' in cellValue) {
+              return cellValue.text;
+            } else if ('type' in cellValue && 'text' in cellValue) {
+              return cellValue.text;
+            } else if (Array.isArray(cellValue)) {
+              // 处理数组类型的值
+              return cellValue.map(item => 
+                typeof item === 'object' && item && 'text' in item 
+                  ? item.text 
+                  : String(item)
+              ).join(', ');
+            } else {
+              // 其他对象类型，尝试转为JSON字符串
+              return JSON.stringify(cellValue);
+            }
+          }
+          return cellValue;
         } else {
           // 或尝试通过表格API获取单元格内容
           const cellValue = await table.getCellValue(fieldId, recordId);
+          
+          // 对cellValue做同样的处理
+          if (cellValue && typeof cellValue === 'object') {
+            // 处理 {type, text} 结构或其他特殊对象
+            if ('text' in cellValue) {
+              return cellValue.text;
+            } else if ('type' in cellValue && 'text' in cellValue) {
+              return cellValue.text;
+            } else if (Array.isArray(cellValue)) {
+              // 处理数组类型的值
+              return cellValue.map(item => 
+                typeof item === 'object' && item && 'text' in item 
+                  ? item.text 
+                  : String(item)
+              ).join(', ');
+            } else {
+              // 其他对象类型，尝试转为JSON字符串
+              return JSON.stringify(cellValue);
+            }
+          }
+          
           return cellValue;
         }
       } catch (innerError) {
@@ -97,7 +137,29 @@ export const feishuBase = {
         const allRecords = await table.getRecordList();
         const targetRecord = Array.from(allRecords).find(r => r.id === recordId);
         if (targetRecord && targetRecord.fields && targetRecord.fields[fieldId] !== undefined) {
-          return targetRecord.fields[fieldId];
+          const cellValue = targetRecord.fields[fieldId];
+          
+          // 对cellValue做同样的处理
+          if (cellValue && typeof cellValue === 'object') {
+            // 处理 {type, text} 结构或其他特殊对象
+            if ('text' in cellValue) {
+              return cellValue.text;
+            } else if ('type' in cellValue && 'text' in cellValue) {
+              return cellValue.text;
+            } else if (Array.isArray(cellValue)) {
+              // 处理数组类型的值
+              return cellValue.map(item => 
+                typeof item === 'object' && item && 'text' in item 
+                  ? item.text 
+                  : String(item)
+              ).join(', ');
+            } else {
+              // 其他对象类型，尝试转为JSON字符串
+              return JSON.stringify(cellValue);
+            }
+          }
+          
+          return cellValue;
         }
         return null; // 如果找不到任何值
       }

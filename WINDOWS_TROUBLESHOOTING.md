@@ -12,7 +12,7 @@
 2. 导航到项目根目录
 3. 运行批处理脚本：
    ```
-   scripts\start-frontend-windows.bat
+   run-windows.bat
    ```
 
 ### 方法二：直接使用npx vite
@@ -21,7 +21,7 @@
 2. 导航到项目根目录
 3. 运行命令：
    ```
-   npx vite
+   npx vite --host 0.0.0.0
    ```
 
 ## 可能遇到的问题和解决方案

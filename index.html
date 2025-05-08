@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <title>飞书多维表格数据助手</title>
+    <meta name="description" content="飞书多维表格插件，通过配置API集成帮助用户自动补全和更新行数据" />
+    <meta name="theme-color" content="#2E6BE0" />
+    <style>
+      body {
+        font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f5f5f5;
+        color: #333;
+      }
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 2rem;
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        margin-top: 2rem;
+      }
+      header {
+        background-color: #2E6BE0;
+        color: white;
+        padding: 1rem 2rem;
+        text-align: center;
+      }
+      h1 {
+        margin: 0;
+        font-size: 1.8rem;
+      }
+      .feature-box {
+        border: 1px solid #e5e6eb;
+        border-radius: 6px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+      }
+      .feature-title {
+        font-weight: bold;
+        color: #165DFF;
+        margin-bottom: 0.5rem;
+      }
+      .btn {
+        display: inline-block;
+        background-color: #2E6BE0;
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        margin-top: 1rem;
+      }
+      .btn:hover {
+        background-color: #165DFF;
+      }
+      .error-box {
+        background-color: #FFF2F2;
+        border: 1px solid #FFCCC7;
+        padding: 1rem;
+        border-radius: 6px;
+        margin-top: 1rem;
+      }
+      .note {
+        background-color: #E8F3FF;
+        padding: 1rem;
+        border-radius: 6px;
+        margin-top: 1rem;
+        color: #165DFF;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>飞书多维表格数据助手</h1>
+    </header>
+    <div class="container">
+      <h2>项目说明</h2>
+      <p>这是一个为飞书多维表格开发的侧边栏插件，提供以下核心功能：</p>
+      
+      <div class="feature-box">
+        <div class="feature-title">字段自动补全</div>
+        <p>通过API查询获取数据，自动填充相关字段</p>
+      </div>
+      
+      <div class="feature-box">
+        <div class="feature-title">数据同步更新</div>
+        <p>使用配置的主键更新行数据</p>
+      </div>
+      
+      <div class="feature-box">
+        <div class="feature-title">字段映射选择</div>
+        <p>灵活选择哪些检索字段映射到哪些列</p>
+      </div>
+      
+      <div class="feature-box">
+        <div class="feature-title">数据差异高亮</div>
+        <p>更新数据时直观展示变更内容</p>
+      </div>
+      
+      <div class="note">
+        <strong>注意：</strong> 此页面是项目的开发环境入口。实际使用时，这个插件需要部署到飞书开发者平台并作为多维表格插件使用。
+      </div>
+      
+      <h2>如何启动开发环境</h2>
+      <p>本项目现已重构为纯前端实现，不再需要后端服务。</p>
+      
+      <h3>Windows系统</h3>
+      <pre>run-windows.bat</pre>
+      <p>或者直接执行：</p>
+      <pre>npx vite --host 0.0.0.0</pre>
+      
+      <h3>macOS/Linux系统</h3>
+      <pre>chmod +x run-unix.sh
+./run-unix.sh</pre>
+      <p>或者直接执行：</p>
+      <pre>npx vite --host 0.0.0.0</pre>
+      
+      <div class="error-box">
+        <strong>本地开发提示：</strong> 在本地开发环境中，某些功能由于无法访问真实的飞书环境而无法完全测试。这个应用设计为在飞书多维表格环境中运行，某些API调用可能会失败。这些错误已经被处理，会显示友好的错误提示。
+      </div>
+      
+      <a href="client/" class="btn">进入前端应用</a>
+    </div>
+    
+    <script>
+      // 简单的重定向逻辑，如果用户点击按钮，跳转到客户端目录
+      document.querySelector('.btn').addEventListener('click', (e) => {
+        e.preventDefault();
+        window.location.href = 'client/';
+      });
+    </script>
+  </body>
+</html>

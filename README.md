@@ -34,24 +34,24 @@ yarn
 
 **Windows系统**：
 ```
-scripts\start-frontend-windows.bat
+run-windows.bat
 ```
 或者直接执行：
 ```
-npx vite
+npx vite --host 0.0.0.0
 ```
 
 **macOS/Linux系统**：
 ```bash
 # 给脚本添加执行权限
-chmod +x scripts/start-frontend-unix.sh
+chmod +x run-unix.sh
 
 # 运行脚本
-./scripts/start-frontend-unix.sh
+./run-unix.sh
 ```
 或者直接执行：
 ```
-npx vite
+npx vite --host 0.0.0.0
 ```
 
 #### 包含后端的旧模式（不再需要）

@@ -3,13 +3,11 @@
  * 适用于Windows/macOS/Linux所有平台
  */
 
-const { spawn } = require('child_process');
-const path = require('path');
-const fs = require('fs');
-const os = require('os');
+import { spawn } from 'child_process';
+import { platform } from 'os';
 
 // 判断操作系统类型
-const isWindows = os.platform() === 'win32';
+const isWindows = platform() === 'win32';
 
 // 确定npm可执行文件路径
 const npmCmd = isWindows ? 'npm.cmd' : 'npm';
@@ -17,10 +15,10 @@ const npmCmd = isWindows ? 'npm.cmd' : 'npm';
 console.log('正在启动纯前端应用...');
 console.log('这是一个纯前端实现，无需后端服务器');
 
-// 启动前端Vite开发服务器
-const viteProcess = spawn(npmCmd, ['run', 'dev:frontend'], {
+// 执行npx vite命令启动前端
+const viteProcess = spawn('npx', ['vite'], {
   stdio: 'inherit',
-  shell: isWindows // Windows需要shell
+  shell: true // 使用shell执行
 });
 
 // 处理进程退出
