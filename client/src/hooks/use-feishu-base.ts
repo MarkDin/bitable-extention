@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { feishuBase, Table, Field, Record, Selection } from '@/lib/feishuBase';
+import { feishuBase, Table, Field, Record, Selection, User } from '@/lib/feishuBase';
 
 export function useFeishuBase() {
   const [activeTable, setActiveTable] = useState<Table | null>(null);

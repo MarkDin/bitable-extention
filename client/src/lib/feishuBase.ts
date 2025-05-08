@@ -26,8 +26,23 @@ export interface Selection {
   recordId: string | null;
 }
 
+export interface User {
+  userId: string;
+  baseUserId: string;
+}
+
 // Mock implementation of Feishu Base JS SDK for development
 export const feishuBase = {
+  // Get current user info
+  getCurrentUser: async (): Promise<User> => {
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return {
+      userId: "u_123456", // 旧的API返回的用户ID（不推荐使用）
+      baseUserId: "bu_789012" // 推荐使用的用户ID
+    };
+  },
+  
   // Get active table
   getActiveTable: async (): Promise<Table> => {
     // Simulate API call delay
