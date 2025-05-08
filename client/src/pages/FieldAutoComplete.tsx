@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import FieldMapping, { Mapping } from "@/components/FieldMapping";
-import DataPreview, { FieldDiff } from "@/components/DataPreview";
+import DataPreview from "@/components/DataPreview";
 import ActionButtons from "@/components/ActionButtons";
 import { useFeishuBase } from "@/hooks/use-feishu-base";
 import { apiRequest } from "@/lib/queryClient";
@@ -75,7 +75,8 @@ const FieldAutoComplete = () => {
       return apiRequest("POST", "/api/search", {
         query: searchQuery,
         field: queryField,
-        apiConfigId: dataSource
+        apiConfigId: dataSource,
+        selection: selection || undefined
       });
     },
     onSuccess: async (res) => {
@@ -103,7 +104,8 @@ const FieldAutoComplete = () => {
         primaryKey: queryField,
         primaryKeyValue: searchQuery,
         apiConfigId: dataSource,
-        mappings: mappings.filter(m => m.isActive)
+        mappings: mappings.filter(m => m.isActive),
+        selection: selection || undefined
       });
     },
     onSuccess: async (res) => {
@@ -151,6 +153,24 @@ const FieldAutoComplete = () => {
         title: "已检测到选中单元格",
         description: `字段: ${selection?.fieldId}, 值: ${value}`,
       });
+      
+      // If we have both field and value, auto search
+      if (selection?.fieldId && value) {
+        // Check if the field has changed
+        if (queryField !== selection.fieldId) {
+          setQueryField(selection.fieldId);
+        }
+        
+        // If search term is different, update it
+        if (searchQuery !== value) {
+          setSearchQuery(value);
+        }
+        
+        // Auto-search if field and value are valid and there's a change
+        if (selection.fieldId && value && dataSource) {
+          searchMutate();
+        }
+      }
     } else {
       toast({
         title: "未检测到选中单元格",
@@ -201,29 +221,49 @@ const FieldAutoComplete = () => {
         <div className="mb-6">
           <Button 
             onClick={handleDetectSelection}
-            variant="outline"
+            variant={selectedCellValue ? "default" : "outline"}
             className="w-full mb-2"
           >
-            检测当前选中单元格
+            {selectedCellValue ? "重新检测选中单元格" : "检测当前选中单元格"}
           </Button>
           {selectedCellValue && (
-            <div className="text-sm text-[#165DFF] bg-[#E8F3FF] p-2 rounded">
-              已检测到选中: {selectedCellValue}
+            <div className="text-sm text-[#165DFF] bg-[#E8F3FF] p-3 rounded flex items-start">
+              <div className="w-4 h-4 mt-0.5 mr-2 rounded-full bg-[#165DFF] flex items-center justify-center text-white">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M20 6L9 17L4 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <div>
+                <div className="font-medium">已检测到选中单元格</div>
+                <div className="mt-1 text-xs text-[#4E5969]">
+                  字段: {recordFields.find(f => f.id === selection?.fieldId)?.name || selection?.fieldId}<br />
+                  值: {selectedCellValue}
+                </div>
+              </div>
             </div>
           )}
         </div>
         
         {/* Field Selection Section */}
         <div className="mb-6">
-          <div className="mb-1 text-sm font-medium">查询字段</div>
+          <div className="mb-1 text-sm font-medium flex items-center">
+            查询字段
+            {selection?.fieldId === queryField && (
+              <span className="ml-2 text-[#165DFF] bg-[#E8F3FF] text-xs px-2 py-0.5 rounded">自动选中</span>
+            )}
+          </div>
           <Select value={queryField} onValueChange={setQueryField}>
-            <SelectTrigger className="w-full text-sm bg-white">
+            <SelectTrigger className={`w-full text-sm bg-white ${selection?.fieldId === queryField ? "border-[#165DFF]" : ""}`}>
               <SelectValue placeholder="选择查询字段" />
             </SelectTrigger>
             <SelectContent>
               {recordFields.map((field) => (
-                <SelectItem key={field.id} value={field.id}>
-                  {field.name}
+                <SelectItem 
+                  key={field.id} 
+                  value={field.id}
+                  className={field.id === selection?.fieldId ? "text-[#165DFF] font-medium" : ""}
+                >
+                  {field.id === selection?.fieldId ? `${field.name} (选中字段)` : field.name}
                 </SelectItem>
               ))}
               {recordFields.length === 0 && (
@@ -237,13 +277,18 @@ const FieldAutoComplete = () => {
         
         {/* Search Query Input */}
         <div className="mb-6">
-          <div className="mb-1 text-sm font-medium">搜索值</div>
+          <div className="mb-1 text-sm font-medium flex items-center">
+            搜索值
+            {selectedCellValue === searchQuery && selectedCellValue && (
+              <span className="ml-2 text-[#165DFF] bg-[#E8F3FF] text-xs px-2 py-0.5 rounded">自动填充</span>
+            )}
+          </div>
           <div className="flex space-x-2">
             <Input 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="输入要搜索的值"
-              className="text-sm"
+              className={`text-sm ${selectedCellValue === searchQuery && selectedCellValue ? "border-[#165DFF]" : ""}`}
             />
             <Button onClick={handleSearch} disabled={isSearching}>
               {isSearching ? "搜索中..." : "搜索"}
