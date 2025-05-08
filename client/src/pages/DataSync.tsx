@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import FieldMapping, { Mapping } from "@/components/FieldMapping";
 import DataPreview, { FieldDiff } from "@/components/DataPreview";
 import ActionButtons from "@/components/ActionButtons";
+import { UserInfo } from "@/components/UserInfo";
 import { useFeishuBase } from "@/hooks/use-feishu-base";
 import { apiRequest } from "@/lib/queryClient";
 import bytedanceLogo from "../assets/tech-logos/bytedance.svg";
@@ -168,6 +169,9 @@ const DataSync = () => {
   return (
     <>
       <div className="p-4">
+        {/* 用户信息 */}
+        <UserInfo />
+        
         {/* Instruction */}
         <div className="mb-4 p-3 bg-[#F2F3F5] rounded-md text-sm text-[#86909C]">
           根据主键字段同步更新已有记录，确保数据保持最新

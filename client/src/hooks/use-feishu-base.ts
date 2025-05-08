@@ -8,6 +8,7 @@ export function useFeishuBase() {
   const [selection, setSelection] = useState<Selection | null>(null);
   const [selectedCellValue, setSelectedCellValue] = useState<string | null>(null);
   const [selectedRecordIds, setSelectedRecordIds] = useState<string[]>([]);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -17,6 +18,10 @@ export function useFeishuBase() {
       setError(null);
 
       try {
+        // Get current user information
+        const user = await feishuBase.getCurrentUser();
+        setCurrentUser(user);
+        
         // Get active table
         const table = await feishuBase.getActiveTable();
         setActiveTable(table);
@@ -118,6 +123,7 @@ export function useFeishuBase() {
     selection,
     selectedCellValue,
     selectedRecordIds,
+    currentUser,
     loading,
     error,
     updateRecord,
