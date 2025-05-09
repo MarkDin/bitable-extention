@@ -23,9 +23,5 @@ export default defineConfig({
     outDir: path.resolve(__dirname, "dist"),
     emptyOutDir: true,
   },
-  server: {
-    port: 3000,
-    open: true,
-    host: true, // 监听所有地址，包括局域网和公网地址
-  },
+  
 });

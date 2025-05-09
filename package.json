@@ -5,13 +5,12 @@
   "license": "MIT",
   "description": "飞书多维表格数据助手 - 纯前端实现的插件",
   "scripts": {
-    "dev": "vite",
-    "dev:host": "vite --host 0.0.0.0",
-    "start": "node start.js",
-    "build": "vite build",
-    "preview": "vite preview",
-    "check": "tsc"
-  },
+  "dev": "vite",
+  "start": "vite --host 0.0.0.0",
+  "build": "vite build",
+  "preview": "vite preview",
+  "check": "tsc"
+},
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
     "@lark-base-open/js-sdk": "^0.5.0",
