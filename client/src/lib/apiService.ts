@@ -1,4 +1,5 @@
-import { bitable } from '@lark-base-open/js-sdk';
+import { bitable, FieldType, IAddFieldConfig, IField, ITable } from '@lark-base-open/js-sdk';
+import { feishuBase } from './feishuBase';
 
 // API配置类型
 export interface ApiConfiguration {
@@ -9,6 +10,11 @@ export interface ApiConfiguration {
   api_key?: string;
 }
 
+export interface CreateFieldConfig {
+  name: string;
+  type: FieldType;
+  activeTable: ITable;
+}
 // 字段映射类型
 export interface FieldMapping {
   id: number;
@@ -53,9 +59,9 @@ async function initializeStorage() {
     }
 
     // 初始化字段映射
-    const fieldMappingsData = await bitable.bridge.getData(STORAGE_KEYS.FIELD_MAPPINGS);
+    const fieldMappingsData = await bitable.bridge.getData(STORAGE_KEYS.API_CONFIGURATIONS);
     if (!fieldMappingsData) {
-      await bitable.bridge.setData(STORAGE_KEYS.FIELD_MAPPINGS, JSON.stringify(DEFAULT_MAPPINGS));
+      await bitable.bridge.setData(STORAGE_KEYS.API_CONFIGURATIONS, JSON.stringify(DEFAULT_MAPPINGS));
     }
   } catch (error) {
     console.error('初始化存储失败:', error);
@@ -145,7 +151,7 @@ export const apiService = {
       if (mappings.length > 0) {
         const allMappings = await apiService.getAllFieldMappings();
         const filteredMappings = allMappings.filter(m => m.api_configuration_id !== id);
-        await bitable.bridge.setData(STORAGE_KEYS.FIELD_MAPPINGS, JSON.stringify(filteredMappings));
+        await bitable.bridge.setData(STORAGE_KEYS.API_CONFIGURATIONS, JSON.stringify(filteredMappings));
       }
       
       return true;
@@ -158,7 +164,8 @@ export const apiService = {
   // 获取所有字段映射
   getAllFieldMappings: async (): Promise<FieldMapping[]> => {
     try {
-      const data = await bitable.bridge.getData(STORAGE_KEYS.FIELD_MAPPINGS);
+      const data = await bitable.bridge.getData(STORAGE_KEYS.API_CONFIGURATIONS);
+      console.log('getAllFieldMappings config:', data);
       return data ? JSON.parse(data) : [];
     } catch (error) {
       console.error('获取所有字段映射失败:', error);
@@ -185,7 +192,7 @@ export const apiService = {
       const newMapping = { ...mapping, id: newId };
       
       mappings.push(newMapping);
-      await bitable.bridge.setData(STORAGE_KEYS.FIELD_MAPPINGS, JSON.stringify(mappings));
+      await bitable.bridge.setData(STORAGE_KEYS.API_CONFIGURATIONS, JSON.stringify(mappings));
       
       return newMapping;
     } catch (error) {
@@ -205,7 +212,7 @@ export const apiService = {
       }
       
       mappings[mappingIndex] = { ...mappings[mappingIndex], ...mapping };
-      await bitable.bridge.setData(STORAGE_KEYS.FIELD_MAPPINGS, JSON.stringify(mappings));
+      await bitable.bridge.setData(STORAGE_KEYS.API_CONFIGURATIONS, JSON.stringify(mappings));
       
       return mappings[mappingIndex];
     } catch (error) {
@@ -224,7 +231,7 @@ export const apiService = {
         return false; // 没有找到要删除的映射
       }
       
-      await bitable.bridge.setData(STORAGE_KEYS.FIELD_MAPPINGS, JSON.stringify(newMappings));
+      await bitable.bridge.setData(STORAGE_KEYS.API_CONFIGURATIONS, JSON.stringify(newMappings));
       return true;
     } catch (error) {
       console.error(`删除字段映射失败(ID:${id}):`, error);
@@ -270,6 +277,8 @@ export const apiService = {
 
   // 更新记录
   update: async (params: {
+    activeTable: ITable,
+    tableId: string,
     recordId: string,
     primaryKey: string,
     primaryKeyValue: string,
@@ -292,5 +301,22 @@ export const apiService = {
       console.error('更新失败:', error);
       throw error;
     }
+  },
+  getAllFields: async (): Promise<IField[]> => {
+    // 获取当前激活的 table
+    const table = await bitable.base.getActiveTable();
+    // 获取所有字段列表
+    const fieldList = await table.getFieldList();
+    return fieldList;
+  },
+  
+  createField: async function (config: CreateFieldConfig) {
+    const field_config: IAddFieldConfig = {
+      name: config.name,
+      type: config.type as FieldType.Text | FieldType.Number | FieldType.SingleSelect | FieldType.MultiSelect | FieldType.DateTime | FieldType.Checkbox | FieldType.User | FieldType.Email
+    }
+    feishuBase.addField(config.activeTable, field_config);
   }
+
+
 };

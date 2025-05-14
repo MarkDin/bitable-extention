@@ -26,6 +26,10 @@ export default defineConfig({
   server: {
     allowedHosts: [
       'all'
-    ]
+    ],
+    https: {
+      key: await import('fs').then(fs => fs.readFileSync("key.pem")),
+      cert: await import('fs').then(fs => fs.readFileSync("cert.pem")),
+    },
   }
 });

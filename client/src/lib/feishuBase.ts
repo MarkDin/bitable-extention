@@ -2,8 +2,8 @@
 // In a real implementation, we would import the actual SDK
 // import { bitable } from '@lark-base-open/js-sdk';
 
-import { bitable } from '@lark-base-open/js-sdk';
-
+import { bitable, FieldType, ITable } from '@lark-base-open/js-sdk';
+import { IAddFieldConfig } from '@lark-base-open/js-sdk';
 export interface User {
   userId: string;
   baseUserId: string;
@@ -210,8 +210,7 @@ export const feishuBase = {
 
   // Update a record
   updateRecord: async (tableId: string, recordId: string, fields: { [key: string]: any }): Promise<void> => {
-    try {
-      const table = await bitable.base.getTableById(tableId);
+    const table = await bitable.base.getTableById(tableId);
       
       // 尝试多种方法更新记录
       try {
@@ -231,52 +230,12 @@ export const feishuBase = {
           return;
         }
       } catch (err) {
-        console.warn('使用record.update更新记录失败，尝试替代方法', err);
-      }
-      
-      // 尝试方法2：使用table.setRecord API
-      try {
-        // 为了解决类型问题，我们创建一个具有fields属性的对象
-        const recordValues = {
-          fields: {} as Record<string, any>
-        };
-        
-        // 为每个字段设置值
-        for (const [fieldId, value] of Object.entries(fields)) {
-          recordValues.fields[fieldId] = value;
-        }
-        
-        // 更新记录
-        if (table.setRecord) {
-          await table.setRecord(recordId, recordValues);
-          return;
-        }
-      } catch (err) {
-        console.warn('使用table.setRecord更新记录失败，尝试替代方法', err);
-      }
-      
-      // 最后尝试方法3：使用最新的updateRecord API
-      try {
-        // 创建更新对象
-        const recordData = {};
-        
-        // 为每个字段设置值
-        for (const [fieldId, value] of Object.entries(fields)) {
-          recordData[fieldId] = value;
-        }
-        
-        // 执行更新
-        if (table.updateRecord) {
-          await table.updateRecord(recordId, recordData);
-          return;
-        }
-      } catch (err) {
-        console.error('所有更新记录的方法都失败了', err);
-        throw new Error('无法更新记录：所有可用方法都失败了');
-      }
-    } catch (error) {
-      console.error(`更新记录失败 (表:${tableId}, 记录:${recordId}):`, error);
-      throw error;
+      console.warn('使用record.update更新记录失败，尝试替代方法', err);
     }
+  },
+
+  addField: async (activeTable: ITable, field_config: IAddFieldConfig) => {
+    console.log('activeTable', activeTable)
+    await activeTable.addField(field_config);
   }
 };

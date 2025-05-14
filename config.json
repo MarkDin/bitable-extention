@@ -1,0 +1,13 @@
+{
+
+    "field_list": [
+        {
+            "name": "accountName",
+            "mapping_field": "客户名称"
+        },
+        {
+            "name": "entityType-label",
+            "mapping_field": "客户类型"
+        }
+    ]
+}

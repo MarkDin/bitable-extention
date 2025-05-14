@@ -9,21 +9,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { UserInfo } from "@/components/UserInfo";
 import { useFeishuBase } from "@/hooks/use-feishu-base";
 import { useToast } from "@/hooks/use-toast";
+import { useFeishuBaseStore } from "@/hooks/useFeishuBaseStore";
 import { apiService } from "@/lib/apiService";
-import { createResponse } from "@/lib/queryClient";
+import { autoCompleteFields } from "@/lib/autoCompleteHelper";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import bytedanceLogo from "../assets/tech-logos/bytedance.svg";
+// import { applyUpdate } from "@/hooks/useApplyUpdate";
 
 const FieldAutoComplete = () => {
   const { toast } = useToast();
   const {
-    // activeTable 未使用，但保留注释以便将来可能的使用
     recordFields,
     selection,
     selectedCellValue,
     selectedRecordIds,
-    refreshSelection,
     loading: feishuLoading
   } = useFeishuBase();
 
@@ -33,16 +33,6 @@ const FieldAutoComplete = () => {
   const [mappings, setMappings] = useState<Mapping[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [searchPerformed, setSearchPerformed] = useState(false);
-
-  // 直接从apiService获取API配置
-  const { data: configData } = useQuery<{ configurations: Array<{id: number, name: string}> }>({
-    queryKey: ["configurations"],
-    queryFn: async () => {
-      const configs = await apiService.getApiConfigurations();
-      return { configurations: configs };
-    },
-    enabled: !feishuLoading,
-  });
 
   // 直接从apiService获取字段映射
   const { data: mappingsData } = useQuery({
@@ -77,13 +67,16 @@ const FieldAutoComplete = () => {
   // 搜索变更 - 直接使用apiService
   const { mutate: searchMutate, isPending: isSearching } = useMutation({
     mutationFn: async () => {
+      const activeTable = useFeishuBaseStore.getState().activeTable;
+      if (!activeTable) throw new Error('表格未初始化');
       const result = await apiService.search({
+        activeTable: activeTable,
         query: searchQuery,
         field: queryField,
         apiConfigId: dataSource,
         selection: selection || undefined
       });
-      return createResponse(result);
+      // return createResponse(result);
     },
     onSuccess: () => {
       setSearchPerformed(true);
@@ -101,33 +94,6 @@ const FieldAutoComplete = () => {
     }
   });
 
-  // 应用更新变更 - 直接使用apiService
-  const { mutate: applyUpdate, isPending: isUpdating } = useMutation({
-    mutationFn: async () => {
-      const result = await apiService.update({
-        recordId: selection?.recordId || selectedRecordIds[0] || "placeholder-record-id",
-        primaryKey: queryField,
-        primaryKeyValue: searchQuery,
-        apiConfigId: dataSource,
-        mappings: mappings.filter(m => m.isActive),
-        selection: selection || undefined
-      });
-      return createResponse(result);
-    },
-    onSuccess: () => {
-      toast({
-        title: "更新成功",
-        description: "所有选定字段已更新",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "更新失败",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  });
 
   // Handle toggling mapping active state
   const handleToggleMapping = (id: number, isActive: boolean) => {
@@ -152,27 +118,28 @@ const FieldAutoComplete = () => {
 
   // Function to detect selection changes and update search query
   const handleDetectSelection = async () => {
-    const value = await refreshSelection();
-    if (value) {
+    const selectedValue = useFeishuBaseStore.getState().selectedCellValue;
+    const selection = useFeishuBaseStore.getState().selection;
+    if (selectedValue) {
       toast({
         title: "已检测到选中单元格",
-        description: `字段: ${selection?.fieldId}, 值: ${value}`,
+        description: `字段: ${selection?.fieldId}, 值: ${selectedValue}`,
       });
 
       // If we have both field and value, auto search
-      if (selection?.fieldId && value) {
+      if (selection?.fieldId && selectedValue) {
         // Check if the field has changed
         if (queryField !== selection.fieldId) {
           setQueryField(selection.fieldId);
         }
 
         // If search term is different, update it
-        if (searchQuery !== value) {
-          setSearchQuery(value);
+        if (searchQuery !== selectedValue) {
+          setSearchQuery(selectedValue);
         }
 
         // Auto-search if field and value are valid and there's a change
-        if (selection.fieldId && value && dataSource) {
+        if (selection.fieldId && selectedValue && dataSource) {
           searchMutate();
         }
       }
@@ -202,16 +169,14 @@ const FieldAutoComplete = () => {
     setSearchPerformed(false);
   };
 
-  const handleApply = () => {
-    if (!searchPerformed) {
-      toast({
-        title: "请先执行搜索",
-        description: "在应用更新前需要先搜索数据",
-        variant: "destructive",
+  const handleApply = async () => {
+    try {
+      await autoCompleteFields({
+        toast
       });
-      return;
+    } catch (e: any) {
+      toast({ title: "补全失败", description: e.message, variant: "destructive" });
     }
-    applyUpdate();
   };
 
   return (
@@ -238,7 +203,7 @@ const FieldAutoComplete = () => {
             <div className="text-sm text-[#165DFF] bg-[#E8F3FF] p-3 rounded flex items-start">
               <div className="w-4 h-4 mt-0.5 mr-2 rounded-full bg-[#165DFF] flex items-center justify-center text-white">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M20 6L9 17L4 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M20 6L9 17L4 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
               <div>
@@ -312,16 +277,9 @@ const FieldAutoComplete = () => {
               <SelectValue placeholder="选择数据源" />
             </SelectTrigger>
             <SelectContent>
-              {configData?.configurations?.map((config: any) => (
-                <SelectItem key={config.id} value={config.id.toString()}>
-                  {config.name}
-                </SelectItem>
-              ))}
-              {!configData && (
-                <SelectItem value="loading" disabled>
-                  加载中...
-                </SelectItem>
-              )}
+              <SelectItem key={1} value="1">
+                mock数据
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -345,8 +303,8 @@ const FieldAutoComplete = () => {
         <ActionButtons
           onCancel={handleCancel}
           onApply={handleApply}
-          isLoading={isUpdating}
-          applyText="应用更新"
+          // isLoading={isUpdating}
+          applyText="应用补全"
         />
       </footer>
 

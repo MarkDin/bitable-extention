@@ -5,12 +5,12 @@
   "license": "MIT",
   "description": "飞书多维表格数据助手 - 纯前端实现的插件",
   "scripts": {
-  "dev": "vite",
-  "start": "vite --host 0.0.0.0",
-  "build": "vite build",
-  "preview": "vite preview",
-  "check": "tsc"
-},
+    "dev": "vite",
+    "start": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "tsc"
+  },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
     "@lark-base-open/js-sdk": "^0.5.0",
@@ -66,7 +66,8 @@
     "vaul": "^1.1.2",
     "wouter": "^3.3.5",
     "zod": "^3.24.2",
-    "zod-validation-error": "^3.4.0"
+    "zod-validation-error": "^3.4.0",
+    "zustand": "^5.0.4"
   },
   "devDependencies": {
     "@replit/vite-plugin-runtime-error-modal": "^0.0.3",

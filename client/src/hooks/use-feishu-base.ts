@@ -1,15 +1,25 @@
-import { useState, useEffect } from 'react';
-import { feishuBase, Selection, User } from '@/lib/feishuBase';
-import { bitable, ITable, IFieldMeta, IRecordValue, IRecordList } from '@lark-base-open/js-sdk';
+import { feishuBase } from '@/lib/feishuBase';
+import { useEffect, useState } from 'react';
+import { useFeishuBaseStore } from './useFeishuBaseStore';
 
 export function useFeishuBase() {
-  const [activeTable, setActiveTable] = useState<ITable | null>(null);
-  const [recordFields, setRecordFields] = useState<IFieldMeta[]>([]);
-  const [records, setRecords] = useState<any[]>([]);
-  const [selection, setSelection] = useState<Selection | null>(null);
-  const [selectedCellValue, setSelectedCellValue] = useState<any>(null);
-  const [selectedRecordIds, setSelectedRecordIds] = useState<string[]>([]);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  // 全局状态
+  const activeTable = useFeishuBaseStore(state => state.activeTable);
+  const setActiveTable = useFeishuBaseStore(state => state.setActiveTable);
+  const recordFields = useFeishuBaseStore(state => state.recordFields);
+  const setRecordFields = useFeishuBaseStore(state => state.setRecordFields);
+  const records = useFeishuBaseStore(state => state.records);
+  const setRecords = useFeishuBaseStore(state => state.setRecords);
+  const selection = useFeishuBaseStore(state => state.selection);
+  const setSelection = useFeishuBaseStore(state => state.setSelection);
+  const selectedCellValue = useFeishuBaseStore(state => state.selectedCellValue);
+  const setSelectedCellValue = useFeishuBaseStore(state => state.setSelectedCellValue);
+  const selectedRecordIds = useFeishuBaseStore(state => state.selectedRecordIds);
+  const setSelectedRecordIds = useFeishuBaseStore(state => state.setSelectedRecordIds);
+  const currentUser = useFeishuBaseStore(state => state.currentUser);
+  const setCurrentUser = useFeishuBaseStore(state => state.setCurrentUser);
+
+  // 本地状态
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,6 +35,7 @@ export function useFeishuBase() {
         
         // Get active table
         const table = await feishuBase.getActiveTable();
+        console.log('fetch table', table)
         setActiveTable(table);
 
         // Get fields
@@ -76,14 +87,14 @@ export function useFeishuBase() {
     try {
       await feishuBase.updateRecord(activeTable.id, recordId, fields);
       
-      // Update local records state
-      setRecords(prevRecords => 
-        prevRecords.map(record => 
-          record.id === recordId 
-            ? { ...record, fields: { ...record.fields, ...fields } } 
-            : record
-        )
+      // Update global records state
+      const currentRecords = useFeishuBaseStore.getState().records;
+      const newRecords = currentRecords.map((record: any) =>
+        record.id === recordId
+          ? { ...record, fields: { ...record.fields, ...fields } }
+          : record
       );
+      setRecords(newRecords);
       
       return true;
     } catch (err) {

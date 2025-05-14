@@ -49,22 +49,11 @@ function ErrorBoundary({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-// 在开发环境中渲染警告横幅
-function DevBanner() {
-  if (process.env.NODE_ENV !== 'development') return null;
-
-  return (
-    <div className="fixed bottom-0 left-0 right-0 bg-amber-500 text-white p-2 text-center text-sm z-50">
-      开发模式：此应用需要在飞书多维表格环境中才能完全正常工作
-    </div>
-  );
-}
 
 createRoot(document.getElementById("root")!).render(
   <ThemeProvider attribute="class">
     <ErrorBoundary>
       <App />
-      <DevBanner />
     </ErrorBoundary>
   </ThemeProvider>
 );

@@ -1,17 +1,16 @@
-import React from "react";
-import TabNavigation from "./TabNavigation";
-import { Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Settings } from "lucide-react";
+import React from "react";
 import { useLocation } from "wouter";
-import { UserInfo } from "./UserInfo";
+import TabNavigation from "./TabNavigation";
 
 interface PluginLayoutProps {
   children: React.ReactNode;
 }
 
 const PluginLayout: React.FC<PluginLayoutProps> = ({ children }) => {
-  const [location] = useLocation();
-  
+  const [location, setLocation] = useLocation();
+
   return (
     <div className="flex flex-col h-screen">
       {/* Header */}
@@ -22,7 +21,7 @@ const PluginLayout: React.FC<PluginLayoutProps> = ({ children }) => {
           </svg>
           <h1 className="ml-2 text-base font-semibold">数据助手</h1>
         </div>
-        <Button variant="ghost" size="icon">
+        <Button variant="ghost" size="icon" onClick={() => setLocation('/config-manager')}>
           <Settings className="w-5 h-5 text-[#86909C] hover:text-[#1F2329]" />
         </Button>
       </header>
@@ -30,10 +29,7 @@ const PluginLayout: React.FC<PluginLayoutProps> = ({ children }) => {
       {/* Tab Navigation */}
       <TabNavigation />
 
-      {/* User Info */}
-      <div className="px-4 pt-4">
-        <UserInfo />
-      </div>
+
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto px-4">
