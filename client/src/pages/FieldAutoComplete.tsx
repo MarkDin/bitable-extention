@@ -23,7 +23,7 @@ const FieldAutoComplete = () => {
     recordFields,
     selection,
     selectedCellValue,
-    selectedRecordIds,
+    refreshSelection,
     loading: feishuLoading
   } = useFeishuBase();
 
@@ -118,6 +118,7 @@ const FieldAutoComplete = () => {
 
   // Function to detect selection changes and update search query
   const handleDetectSelection = async () => {
+    await refreshSelection();
     const selectedValue = useFeishuBaseStore.getState().selectedCellValue;
     const selection = useFeishuBaseStore.getState().selection;
     if (selectedValue) {
@@ -171,6 +172,7 @@ const FieldAutoComplete = () => {
 
   const handleApply = async () => {
     try {
+      await refreshSelection();
       await autoCompleteFields({
         toast
       });

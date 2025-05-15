@@ -1,7 +1,7 @@
 import { bitable } from "@lark-base-open/js-sdk";
 
 // FIXME: 这里的client_id、client_secret、username、password等敏感信息建议通过环境变量或安全方式管理
-const BASE_URL = "https://api.xiaoshouyi.com";
+const BASE_URL = "https://crm-data-service-dk1543100966.replit.app/customer_info?id=";
 const TOKEN_URL = "https://login.xiaoshouyi.com/auc/oauth2/token";
 
 interface TokenResponse {
@@ -37,23 +37,17 @@ async function getAccessToken(): Promise<string> {
 }
 
 export async function getCustomerInfoById(id: number | string): Promise<any> {
-    // mock
-    return {
-        "accountName": "海天味业",
-        "entityType-label": "外部客户",
-    }
-//   const token = await getAccessToken();
-//   const url = `${BASE_URL}/rest/data/v2.0/xobjects/account/${id}`;
-//   const headers = {
-//     Authorization: `Bearer ${token}`,
-//   };
-//   const res = await fetch(url, { headers });
-//   if (!res.ok) {
-//     throw new Error(`获取客户信息失败: ${res.statusText}`);
-//   }
-//   const json = await res.json();
-//   console.log('res:', json);
-//   return json;
+    
+  const url = `${BASE_URL}${id}`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`获取客户信息失败: ${res.statusText}`);
+  }
+  const json = await res.json();
+  if (json.success) {
+    return json.data;
+  }
+  throw new Error(`获取客户信息失败`);
 }
 
 // 示例调用

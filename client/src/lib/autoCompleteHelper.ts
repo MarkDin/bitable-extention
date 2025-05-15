@@ -35,7 +35,7 @@ export async function autoCompleteFields({toast }: AutoCompleteParams) {
     toast?.({ title: "获取数据失败", description: e.message, variant: "destructive" });
     return;
   }
-  const resultFields = result?.data || result;
+  const resultFields = result.data || result;
   console.log('resultFields', resultFields);
   // 3. 检查表头
   const activeTable: ITable = await bitable.base.getActiveTable();
@@ -67,7 +67,7 @@ export async function autoCompleteFields({toast }: AutoCompleteParams) {
   for (const field of fieldList) {
     const fieldName = field.mapping_field;
     const value = resultFields[field.name];
-    console.log('fieldName', fieldName, 'value', value);
+    console.log('fieldName', field.name, 'value', value);
     if (fieldNameToId[fieldName] && value !== undefined) {
       await activeTable.setCellValue(fieldNameToId[fieldName], recordId, value);
     }
