@@ -33,6 +33,7 @@ const FieldAutoComplete = () => {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [searchPerformed, setSearchPerformed] = useState(false);
   const [completableFields, setCompletableFields] = useState<Array<{ name: string; mapping_field: string }>>([]);
+const [selectedFields, setSelectedFields] = useState<string[]>([]);
 
   // 获取可补全字段配置
   useEffect(() => {
@@ -170,7 +171,8 @@ const FieldAutoComplete = () => {
     try {
       await refreshSelection();
       await autoCompleteFields({
-        toast
+        toast,
+        selectedFields
       });
     } catch (e: any) {
       toast({ title: "补全失败", description: e.message, variant: "destructive" });
@@ -279,7 +281,11 @@ const FieldAutoComplete = () => {
           </Select>
         </div>
 
-        <CompletableFields fields={completableFields} />
+        <CompletableFields 
+  fields={completableFields} 
+  selectedFields={selectedFields}
+  onSelectionChange={setSelectedFields}
+/>
       </div>
 
       {/* Data Preview */}

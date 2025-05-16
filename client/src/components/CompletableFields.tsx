@@ -1,15 +1,25 @@
 
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface CompletableFieldsProps {
   fields: Array<{ name: string; mapping_field: string }>;
+  selectedFields: string[];
+  onSelectionChange: (fields: string[]) => void;
 }
 
-const CompletableFields: React.FC<CompletableFieldsProps> = ({ fields }) => {
+const CompletableFields: React.FC<CompletableFieldsProps> = ({ fields, selectedFields, onSelectionChange }) => {
   if (!fields?.length) {
     return null;
   }
+
+  const handleToggle = (field: string) => {
+    const newSelection = selectedFields.includes(field)
+      ? selectedFields.filter(f => f !== field)
+      : [...selectedFields, field];
+    onSelectionChange(newSelection);
+  };
 
   return (
     <div className="mb-6">
@@ -19,9 +29,16 @@ const CompletableFields: React.FC<CompletableFieldsProps> = ({ fields }) => {
       </div>
       <div className="flex flex-wrap gap-2">
         {fields.map((field, index) => (
-          <Badge key={index} variant="secondary" className="text-xs">
-            {field.mapping_field}
-          </Badge>
+          <div key={index} className="flex items-center space-x-2 bg-secondary rounded-md px-2 py-1">
+            <Checkbox
+              id={`field-${index}`}
+              checked={selectedFields.includes(field.name)}
+              onCheckedChange={() => handleToggle(field.name)}
+            />
+            <label htmlFor={`field-${index}`} className="text-xs cursor-pointer">
+              {field.mapping_field}
+            </label>
+          </div>
         ))}
       </div>
     </div>

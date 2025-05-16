@@ -8,10 +8,13 @@ interface AutoCompleteParams {
   toast: (args: any) => void;
 }
 
-export async function autoCompleteFields({toast }: AutoCompleteParams) {
+export async function autoCompleteFields({toast, selectedFields = [] }: AutoCompleteParams & { selectedFields?: string[] }) {
   // 1. 读取配置字段
   const config = await getConfig();
-  const fieldList = config?.field_list || [];
+  const allFields = config?.field_list || [];
+const fieldList = selectedFields.length > 0
+  ? allFields.filter(f => selectedFields.includes(f.name))
+  : allFields;
   const selection = useFeishuBaseStore.getState().selection;
   const selectedCellValue = useFeishuBaseStore.getState().selectedCellValue;
   if (!fieldList.length) {
