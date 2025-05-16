@@ -46,8 +46,8 @@ const fieldList = selectedFields.length > 0
   console.log('resultFields', resultFields);
   // 3. 检查表头
   const activeTable: ITable = await bitable.base.getActiveTable();
-  const allFields = await apiService.getAllFields();
-  const allFieldNames = await Promise.all(allFields.map((f: any) => f.getName()));
+  const tableFields = await apiService.getAllFields();
+  const allFieldNames = await Promise.all(tableFields.map((f: any) => f.getName()));
   const missingFields = fieldList.filter((f: any) => !allFieldNames.includes(f.mapping_field));
 
   // 4. 新建缺失表头
