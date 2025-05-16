@@ -1,4 +1,4 @@
-modules = ["nodejs-20", "web", "postgresql-16"]
+modules = ["nodejs-20", "web"]
 run = "npm run dev"
 hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 
@@ -13,9 +13,9 @@ build = ["sh", "-c", "npm run build"]
 [[ports]]
 localPort = 5000
 externalPort = 80
-exposeLocalhost = true
+
 [workflows]
-runButton = "Project"
+runButton = "Start Dev Server"
 
 [[workflows.workflow]]
 name = "Project"
@@ -34,3 +34,12 @@ author = "agent"
 task = "shell.exec"
 args = "npm run dev"
 waitForPort = 5000
+
+[[workflows.workflow]]
+name = "Start Dev Server"
+author = 41431705
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev -- --host 0.0.0.0 --port 5000"
