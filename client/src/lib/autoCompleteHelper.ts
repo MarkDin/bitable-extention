@@ -36,6 +36,10 @@ export async function autoCompleteFields({toast }: AutoCompleteParams) {
     return;
   }
   const resultFields = result.data || result;
+  if (resultFields.errorInfo) {
+    toast?.({ title: "获取数据失败", description: resultFields.errorInfo.msg, variant: "destructive" });
+    return;
+  }
   console.log('resultFields', resultFields);
   // 3. 检查表头
   const activeTable: ITable = await bitable.base.getActiveTable();
