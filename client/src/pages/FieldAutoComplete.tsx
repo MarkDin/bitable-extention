@@ -1,6 +1,5 @@
 import ActionButtons from "@/components/ActionButtons";
 import DataPreview from "@/components/DataPreview";
-import FieldMapping, { Mapping } from "@/components/FieldMapping";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -29,8 +28,6 @@ const FieldAutoComplete = () => {
 
   const [queryField, setQueryField] = useState<string>("");
   const [dataSource, setDataSource] = useState<number>(1);
-  const [isEditMappingOpen, setIsEditMappingOpen] = useState(false);
-  const [mappings, setMappings] = useState<Mapping[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [searchPerformed, setSearchPerformed] = useState(false);
 
@@ -44,23 +41,10 @@ const FieldAutoComplete = () => {
     enabled: !!dataSource,
   });
 
-  // Set queryField and searchQuery from selection when available
-  useEffect(() => {
-    if (selection?.fieldId && selectedCellValue) {
-      setQueryField(selection.fieldId);
-      setSearchQuery(selectedCellValue);
-    }
-  }, [selection, selectedCellValue]);
-
   // Update mappings when fetched
   useEffect(() => {
     if (mappingsData?.mappings) {
-      setMappings(mappingsData.mappings.map((m: any) => ({
-        id: m.id,
-        sourceField: m.source_field,
-        targetField: m.target_field,
-        isActive: m.is_active
-      })));
+      
     }
   }, [mappingsData]);
 
@@ -97,9 +81,7 @@ const FieldAutoComplete = () => {
 
   // Handle toggling mapping active state
   const handleToggleMapping = (id: number, isActive: boolean) => {
-    setMappings(mappings.map(m =>
-      m.id === id ? { ...m, isActive } : m
-    ));
+    
   };
 
   // Sample preview data - this would normally come from the API
@@ -283,12 +265,7 @@ const FieldAutoComplete = () => {
           </Select>
         </div>
 
-        {/* Field Mapping */}
-        <FieldMapping
-          mappings={mappings}
-          onToggle={handleToggleMapping}
-          onEditMappings={() => setIsEditMappingOpen(true)}
-        />
+        
       </div>
 
       {/* Data Preview */}
@@ -308,33 +285,7 @@ const FieldAutoComplete = () => {
       </footer>
 
       {/* Edit Mapping Dialog */}
-      <Dialog open={isEditMappingOpen} onOpenChange={setIsEditMappingOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>编辑字段映射</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            {mappings.map((mapping, index) => (
-              <div key={index} className="grid grid-cols-5 items-center gap-2">
-                <Label className="text-right col-span-1">{mapping.sourceField}</Label>
-                <span className="col-span-1 text-center">→</span>
-                <Input
-                  className="col-span-3"
-                  value={mapping.targetField}
-                  onChange={(e) => {
-                    const newMappings = [...mappings];
-                    newMappings[index].targetField = e.target.value;
-                    setMappings(newMappings);
-                  }}
-                />
-              </div>
-            ))}
-          </div>
-          <DialogFooter>
-            <Button onClick={() => setIsEditMappingOpen(false)}>保存</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      
     </>
   );
 };
