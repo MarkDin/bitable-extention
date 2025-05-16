@@ -184,9 +184,6 @@ const FieldAutoComplete = () => {
   return (
     <>
       <div className="p-4">
-        {/* 用户信息 */}
-        <UserInfo />
-
         {/* Instruction */}
         <div className="mb-4 p-3 bg-[#F2F3F5] rounded-md text-sm text-[#86909C]">
           选择一个记录的字段值作为查询条件，然后自动填充其它相关字段
