@@ -3,6 +3,8 @@ import DataPreview from "@/components/DataPreview";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import CompletableFields from "@/components/CompletableFields";
+import { getConfig } from "@/lib/dataSync";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UserInfo } from "@/components/UserInfo";
@@ -30,6 +32,18 @@ const FieldAutoComplete = () => {
   const [dataSource, setDataSource] = useState<number>(1);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [searchPerformed, setSearchPerformed] = useState(false);
+  const [completableFields, setCompletableFields] = useState<Array<{ name: string; mapping_field: string }>>([]);
+
+  // 获取可补全字段配置
+  useEffect(() => {
+    const fetchConfig = async () => {
+      const config = await getConfig();
+      if (config?.field_list) {
+        setCompletableFields(config.field_list);
+      }
+    };
+    fetchConfig();
+  }, []);
 
   // 直接从apiService获取字段映射
   const { data: mappingsData } = useQuery({
@@ -265,7 +279,7 @@ const FieldAutoComplete = () => {
           </Select>
         </div>
 
-        
+        <CompletableFields fields={completableFields} />
       </div>
 
       {/* Data Preview */}
