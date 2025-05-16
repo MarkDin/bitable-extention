@@ -84,11 +84,12 @@ export async function setConfig(config: Config): Promise<boolean> {
 /**
  * 获取多维表格中存储的配置（json对象）
  */
+export interface Field {
+  name: string;
+  mapping_field: string;
+}
 export interface Config {
-  field_list: {
-    name: string;
-    mapping_field: string;
-  }[];
+  field_list: Field[];
 }
 export async function getConfig<T = Config>(): Promise<T | null> {
   return await bitable.bridge.getData<T>(CONFIG_KEY);

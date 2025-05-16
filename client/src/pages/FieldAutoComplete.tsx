@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import CompletableFields from "@/components/CompletableFields";
-import { getConfig } from "@/lib/dataSync";
+import { Field, getConfig } from "@/lib/dataSync";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UserInfo } from "@/components/UserInfo";
@@ -32,8 +32,8 @@ const FieldAutoComplete = () => {
   const [dataSource, setDataSource] = useState<number>(1);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [searchPerformed, setSearchPerformed] = useState(false);
-  const [completableFields, setCompletableFields] = useState<Array<{ name: string; mapping_field: string }>>([]);
-const [selectedFields, setSelectedFields] = useState<string[]>([]);
+  const [completableFields, setCompletableFields] = useState<Field[]>([]);
+  const [selectedFields, setSelectedFields] = useState<Field[]>([]);
 
   // 获取可补全字段配置
   useEffect(() => {
@@ -59,7 +59,7 @@ const [selectedFields, setSelectedFields] = useState<string[]>([]);
   // Update mappings when fetched
   useEffect(() => {
     if (mappingsData?.mappings) {
-      
+
     }
   }, [mappingsData]);
 
@@ -96,7 +96,7 @@ const [selectedFields, setSelectedFields] = useState<string[]>([]);
 
   // Handle toggling mapping active state
   const handleToggleMapping = (id: number, isActive: boolean) => {
-    
+
   };
 
   // Sample preview data - this would normally come from the API
@@ -281,11 +281,11 @@ const [selectedFields, setSelectedFields] = useState<string[]>([]);
           </Select>
         </div>
 
-        <CompletableFields 
-  fields={completableFields} 
-  selectedFields={selectedFields}
-  onSelectionChange={setSelectedFields}
-/>
+        <CompletableFields
+          fields={completableFields}
+          selectedFields={selectedFields}
+          onSelectionChange={setSelectedFields}
+        />
       </div>
 
       {/* Data Preview */}
@@ -304,8 +304,7 @@ const [selectedFields, setSelectedFields] = useState<string[]>([]);
         />
       </footer>
 
-      {/* Edit Mapping Dialog */}
-      
+
     </>
   );
 };

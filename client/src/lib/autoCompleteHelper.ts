@@ -1,23 +1,21 @@
 import { useFeishuBaseStore } from "@/hooks/useFeishuBaseStore";
 import { apiService } from "@/lib/apiService";
-import { getConfig, getCustomerInfoById } from "@/lib/dataSync";
+import { Field, getCustomerInfoById } from "@/lib/dataSync";
 import type { ITable } from "@lark-base-open/js-sdk";
 import { bitable } from "@lark-base-open/js-sdk";
 
 interface AutoCompleteParams {
   toast: (args: any) => void;
+  selectedFields: Field[];
 }
 
-export async function autoCompleteFields({toast, selectedFields = [] }: AutoCompleteParams & { selectedFields?: string[] }) {
+export async function autoCompleteFields({toast, selectedFields }: AutoCompleteParams) {
   // 1. 读取配置字段
-  const config = await getConfig();
-  const allFields = config?.field_list || [];
-const fieldList = selectedFields.length > 0
-  ? allFields.filter(f => selectedFields.includes(f.name))
-  : allFields;
+  // const allFields = config?.field_list || [];
+  console.log('selectedFields', selectedFields);
   const selection = useFeishuBaseStore.getState().selection;
   const selectedCellValue = useFeishuBaseStore.getState().selectedCellValue;
-  if (!fieldList.length) {
+  if (!selectedFields.length) {
     toast?.({ title: "未配置补全字段", variant: "destructive" });
     return;
   }
@@ -48,7 +46,7 @@ const fieldList = selectedFields.length > 0
   const activeTable: ITable = await bitable.base.getActiveTable();
   const tableFields = await apiService.getAllFields();
   const allFieldNames = await Promise.all(tableFields.map((f: any) => f.getName()));
-  const missingFields = fieldList.filter((f: any) => !allFieldNames.includes(f.mapping_field));
+  const missingFields = selectedFields.filter((f: Field) => !allFieldNames.includes(f.mapping_field));
 
   // 4. 新建缺失表头
   for (const field of missingFields) {
@@ -71,7 +69,7 @@ const fieldList = selectedFields.length > 0
   // 6. 写入数据
   const recordId = selection.recordId;
   console.log('recordId', recordId);
-  for (const field of fieldList) {
+  for (const field of selectedFields) {
     const fieldName = field.mapping_field;
     const value = resultFields[field.name];
     console.log('fieldName', field.name, 'value', value);
