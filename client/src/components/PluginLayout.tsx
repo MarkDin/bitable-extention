@@ -33,7 +33,12 @@ const PluginLayout: React.FC<PluginLayoutProps> = ({ children }) => {
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto px-4">
-        {children}
+        <div className="mx-auto max-w-5xl">
+          {children}
+        </div>
+        <div className="fixed bottom-0 right-0 p-2 text-xs text-gray-500 bg-white rounded-tl-md border-l border-t">
+          <span>可一次补全多行记录 (最大50行)</span>
+        </div>
       </main>
     </div>
   );

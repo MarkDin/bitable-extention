@@ -11,20 +11,36 @@ interface AutoCompleteParams {
 
 export async function autoCompleteFields({toast, selectedFields }: AutoCompleteParams) {
   // 1. 读取配置字段
-  // const allFields = config?.field_list || [];
   console.log('selectedFields', selectedFields);
-  const selection = useFeishuBaseStore.getState().selection;
-  const selectedCellValue = useFeishuBaseStore.getState().selectedCellValue;
   if (!selectedFields.length) {
     toast?.({ title: "未配置补全字段", variant: "destructive" });
     return;
   }
-  if (!selection) {
-    toast?.({ title: "未选中单元格", variant: "destructive" });
+
+  // 获取当前选中的所有记录
+  const activeTable: ITable = await bitable.base.getActiveTable();
+  const selection = await activeTable.getSelection();
+  
+  // 检查是否有选中记录
+  if (!selection || !selection.recordIds || selection.recordIds.length === 0) {
+    toast?.({ title: "未选中记录", variant: "destructive" });
     return;
   }
-  if (!selection.recordId) {
-    toast?.({ title: "未选中记录", variant: "destructive" });
+  
+  // 限制最大处理行数为50
+  const recordIds = selection.recordIds.slice(0, 50);
+  if (selection.recordIds.length > 50) {
+    toast?.({ 
+      title: "选中行数过多", 
+      description: `已限制为最大50行，当前处理${recordIds.length}行`, 
+      variant: "warning" 
+    });
+  }
+  
+  // 获取查询字段信息
+  const selectedCellValue = useFeishuBaseStore.getState().selectedCellValue;
+  if (!selectedCellValue) {
+    toast?.({ title: "未获取到查询值", variant: "destructive" });
     return;
   }
 
@@ -42,8 +58,8 @@ export async function autoCompleteFields({toast, selectedFields }: AutoCompleteP
     return;
   }
   console.log('resultFields', resultFields);
+  
   // 3. 检查表头
-  const activeTable: ITable = await bitable.base.getActiveTable();
   const tableFields = await apiService.getAllFields();
   const allFieldNames = await Promise.all(tableFields.map((f: any) => f.getName()));
   const missingFields = selectedFields.filter((f: Field) => !allFieldNames.includes(f.mapping_field));
@@ -66,16 +82,26 @@ export async function autoCompleteFields({toast, selectedFields }: AutoCompleteP
     fieldNameToId[name] = f.id;
   }
 
-  // 6. 写入数据
-  const recordId = selection.recordId;
-  console.log('recordId', recordId);
-  for (const field of selectedFields) {
-    const fieldName = field.mapping_field;
-    const value = resultFields[field.name];
-    console.log('fieldName', field.name, 'value', value);
-    if (fieldNameToId[fieldName] && value !== undefined) {
-      await activeTable.setCellValue(fieldNameToId[fieldName], recordId, value);
+  // 6. 为每条选中记录写入数据
+  let successCount = 0;
+  for (const recordId of recordIds) {
+    try {
+      for (const field of selectedFields) {
+        const fieldName = field.mapping_field;
+        const value = resultFields[field.name];
+        console.log('fieldName', field.name, 'value', value);
+        if (fieldNameToId[fieldName] && value !== undefined) {
+          await activeTable.setCellValue(fieldNameToId[fieldName], recordId, value);
+        }
+      }
+      successCount++;
+    } catch (error) {
+      console.error(`Failed to update record ${recordId}:`, error);
     }
   }
-  toast?.({ title: "补全完成", description: "数据已写入表格" });
+  
+  toast?.({ 
+    title: "补全完成", 
+    description: `已成功处理${successCount}/${recordIds.length}条记录` 
+  });
 } 
