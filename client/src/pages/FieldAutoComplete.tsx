@@ -154,13 +154,13 @@ const FieldAutoComplete = () => {
     setSearchPerformed(false);
   };
 
-  const handleApply = async () => {
+  const handleApply = async (singleComplate: boolean) => {
     try {
       await refreshSelection();
       await autoCompleteFields({
         toast,
         selectedFields,
-        singleComplate: false
+        singleComplate: singleComplate
       });
     } catch (e: any) {
       toast({ title: "补全失败", description: e.message, variant: "destructive" });
@@ -282,7 +282,6 @@ const FieldAutoComplete = () => {
           onCancel={handleCancel}
           onApply={handleApply}
           // isLoading={isUpdating}
-          applyText="应用补全"
         />
       </footer>
 
