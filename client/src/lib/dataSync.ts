@@ -2,42 +2,10 @@ import { bitable } from "@lark-base-open/js-sdk";
 
 // FIXME: 这里的client_id、client_secret、username、password等敏感信息建议通过环境变量或安全方式管理
 const BASE_URL = "https://crm-data-service-dk1543100966.replit.app/customer_info?id=";
-const TOKEN_URL = "https://login.xiaoshouyi.com/auc/oauth2/token";
 
-interface TokenResponse {
-  access_token: string;
-  [key: string]: any;
-}
-
-let token: string | null = null;
-
-async function getAccessToken(): Promise<string> {
-  if (token) return token;
-  const headers = {
-    "Content-Type": "application/x-www-form-urlencoded",
-  };
-  const data = new URLSearchParams({
-    grant_type: "password",
-    client_id: "2b2e284b2cc93453a654454f9f4c909b",
-    client_secret: "1c39d769d68c8a9c582cb257552ee90d",
-    username: "18310796971",
-    password: "shigongdui2OQiiZqD",
-  });
-  const res = await fetch(TOKEN_URL, {
-    method: "POST",
-    headers,
-    body: data.toString(),
-  });
-  if (!res.ok) {
-    throw new Error(`获取access_token失败: ${res.statusText}`);
-  }
-  const json: TokenResponse = await res.json();
-  token = json.access_token;
-  return token;
-}
 
 export async function getCustomerInfoById(id: number | string): Promise<any> {
-    
+
   const url = `${BASE_URL}${id}`;
   const res = await fetch(url);
   if (!res.ok) {
