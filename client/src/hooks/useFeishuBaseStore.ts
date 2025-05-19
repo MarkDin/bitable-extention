@@ -15,14 +15,15 @@ interface FeishuBaseState {
   selection: Selection | null;
   setSelection: (selection: Selection | null) => void;
 
-  selectedCellValue: any;
-  setSelectedCellValue: (value: any) => void;
 
   selectedRecordIds: string[];
   setSelectedRecordIds: (ids: string[]) => void;
 
   currentUser: User | null;
   setCurrentUser: (user: User | null) => void;
+
+  selectedCellValue: any;
+  setSelectedCellValue: (value: any) => void;
 }
 
 export const useFeishuBaseStore = create<FeishuBaseState>((set) => ({
@@ -38,12 +39,12 @@ export const useFeishuBaseStore = create<FeishuBaseState>((set) => ({
   selection: null,
   setSelection: (selection) => set({ selection }),
 
-  selectedCellValue: null,
-  setSelectedCellValue: (selectedCellValue) => set({ selectedCellValue }),
-
   selectedRecordIds: [],
   setSelectedRecordIds: (selectedRecordIds) => set({ selectedRecordIds }),
 
   currentUser: null,
   setCurrentUser: (currentUser) => set({ currentUser }),
+
+  selectedCellValue: null,
+  setSelectedCellValue: (selectedCellValue) => set({ selectedCellValue }),
 })); 

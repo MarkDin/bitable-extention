@@ -4,18 +4,21 @@ import { bitable } from "@lark-base-open/js-sdk";
 const BASE_URL = "https://crm-data-service-dk1543100966.replit.app/customer_info?id=";
 
 
-export async function getCustomerInfoById(id: number | string): Promise<any> {
+export async function getCustomerInfoById(id: number | string): Promise<Record<string, any>> {
 
-  const url = `${BASE_URL}${id}`;
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`获取客户信息失败: ${res.statusText}`);
-  }
-  const json = await res.json();
-  if (json.success) {
-    return json.data;
-  }
-  throw new Error(`获取客户信息失败`);
+  // const url = `${BASE_URL}${id}`;
+  // const res = await fetch(url);
+  // if (!res.ok) {
+  //   throw new Error(`获取客户信息失败: ${res.statusText}`);
+  // }
+  // const json = await res.json();
+  // if (json?.data?.errorInfo) {
+  //   throw new Error(`获取客户信息失败: ${json.data.errorInfo.msg}`);
+  // }
+  // if (json.success) {
+  //   return json.data;
+  // }
+  // throw new Error(`获取客户信息失败`);
 }
 
 // 示例调用
@@ -67,3 +70,34 @@ export async function getConfig<T = Config>(): Promise<T | null> {
 // await setConfig({a: 1, b: 2});
 // const config = await getConfig();
 // console.log(config);
+
+export interface MockGetDataByIdsResult {
+  success: boolean;
+  data: {
+    result_map: Record<string, Record<string, string>>;
+  };
+  error_msg?: string;
+}
+/**
+ * mock 获取数据接口，模拟 api.md 中定义的接口
+ * @param id_list 需要获取的 id 列表
+ * @returns 模拟的接口返回数据
+ */
+export async function mockGetDataByIds(id_list: string[]): Promise<MockGetDataByIdsResult> {
+  // 生成 mock 数据
+  const result_map: Record<string, Record<string, string>> = {};
+  id_list.forEach((id, idx) => {
+    result_map[id] = {
+      accountName: `value1_${id}`,
+      accountId: `value2_${id}`,
+      accountType: `value3_${id}`,
+    };
+  });
+  return {
+    success: true,
+    data: {
+      result_map,
+    },
+    error_msg: '',
+  };
+}

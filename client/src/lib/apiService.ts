@@ -103,10 +103,10 @@ export const apiService = {
       const configs = await apiService.getApiConfigurations();
       const newId = configs.length > 0 ? Math.max(...configs.map(c => c.id)) + 1 : 1;
       const newConfig = { ...config, id: newId };
-      
+
       configs.push(newConfig);
       await bitable.bridge.setData(STORAGE_KEYS.API_CONFIGURATIONS, JSON.stringify(configs));
-      
+
       return newConfig;
     } catch (error) {
       console.error('创建API配置失败:', error);
@@ -119,14 +119,14 @@ export const apiService = {
     try {
       const configs = await apiService.getApiConfigurations();
       const configIndex = configs.findIndex(c => c.id === id);
-      
+
       if (configIndex === -1) {
         return undefined;
       }
-      
+
       configs[configIndex] = { ...configs[configIndex], ...config };
       await bitable.bridge.setData(STORAGE_KEYS.API_CONFIGURATIONS, JSON.stringify(configs));
-      
+
       return configs[configIndex];
     } catch (error) {
       console.error(`更新API配置失败(ID:${id}):`, error);
@@ -139,13 +139,13 @@ export const apiService = {
     try {
       const configs = await apiService.getApiConfigurations();
       const newConfigs = configs.filter(c => c.id !== id);
-      
+
       if (configs.length === newConfigs.length) {
         return false; // 没有找到要删除的配置
       }
-      
+
       await bitable.bridge.setData(STORAGE_KEYS.API_CONFIGURATIONS, JSON.stringify(newConfigs));
-      
+
       // 同时删除相关的字段映射
       const mappings = await apiService.getFieldMappings(id);
       if (mappings.length > 0) {
@@ -153,7 +153,7 @@ export const apiService = {
         const filteredMappings = allMappings.filter(m => m.api_configuration_id !== id);
         await bitable.bridge.setData(STORAGE_KEYS.API_CONFIGURATIONS, JSON.stringify(filteredMappings));
       }
-      
+
       return true;
     } catch (error) {
       console.error(`删除API配置失败(ID:${id}):`, error);
@@ -190,10 +190,10 @@ export const apiService = {
       const mappings = await apiService.getAllFieldMappings();
       const newId = mappings.length > 0 ? Math.max(...mappings.map(m => m.id)) + 1 : 1;
       const newMapping = { ...mapping, id: newId };
-      
+
       mappings.push(newMapping);
       await bitable.bridge.setData(STORAGE_KEYS.API_CONFIGURATIONS, JSON.stringify(mappings));
-      
+
       return newMapping;
     } catch (error) {
       console.error('创建字段映射失败:', error);
@@ -206,14 +206,14 @@ export const apiService = {
     try {
       const mappings = await apiService.getAllFieldMappings();
       const mappingIndex = mappings.findIndex(m => m.id === id);
-      
+
       if (mappingIndex === -1) {
         return undefined;
       }
-      
+
       mappings[mappingIndex] = { ...mappings[mappingIndex], ...mapping };
       await bitable.bridge.setData(STORAGE_KEYS.API_CONFIGURATIONS, JSON.stringify(mappings));
-      
+
       return mappings[mappingIndex];
     } catch (error) {
       console.error(`更新字段映射失败(ID:${id}):`, error);
@@ -226,11 +226,11 @@ export const apiService = {
     try {
       const mappings = await apiService.getAllFieldMappings();
       const newMappings = mappings.filter(m => m.id !== id);
-      
+
       if (mappings.length === newMappings.length) {
         return false; // 没有找到要删除的映射
       }
-      
+
       await bitable.bridge.setData(STORAGE_KEYS.API_CONFIGURATIONS, JSON.stringify(newMappings));
       return true;
     } catch (error) {
@@ -240,9 +240,9 @@ export const apiService = {
   },
 
   // 搜索数据
-  search: async (params: { 
-    query: string, 
-    field: string, 
+  search: async (params: {
+    query: string,
+    field: string,
     apiConfigId: number,
     selection?: any
   }): Promise<any> => {
@@ -250,10 +250,10 @@ export const apiService = {
       // 实际项目中，这里应该调用外部API
       // 但由于我们正在移除后端，暂时返回模拟数据
       console.log('搜索参数:', params);
-      
+
       // 模拟API调用延迟
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       return {
         success: true,
         message: "Search completed",
@@ -288,10 +288,10 @@ export const apiService = {
   }): Promise<any> => {
     try {
       console.log('更新参数:', params);
-      
+
       // 模拟API调用延迟
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       return {
         success: true,
         message: "Update completed",
@@ -309,14 +309,28 @@ export const apiService = {
     const fieldList = await table.getFieldList();
     return fieldList;
   },
-  
+
   createField: async function (config: CreateFieldConfig) {
     const field_config: IAddFieldConfig = {
       name: config.name,
       type: config.type as FieldType.Text | FieldType.Number | FieldType.SingleSelect | FieldType.MultiSelect | FieldType.DateTime | FieldType.Checkbox | FieldType.User | FieldType.Email
     }
     feishuBase.addField(config.activeTable, field_config);
-  }
+  },
+  // 根据传入的recordIDs和field IDs，获取对应的cell value
+  getCellValues: async (activeTable: ITable, recordIds: string[], fieldId: string) => {
+    const values: any[] = [];
+    for (const recordId of recordIds) {
+      const record = await activeTable?.getCellValue(fieldId, recordId);
+      if (record) {
+        values.push(record[0].text);
+      } else {
+        console.error(`获取单元格值失败(recordId:${recordId}, fieldId:${fieldId})`);
+        values.push(null);
+      }
+    }
+    return values;
+  },
 
 
 };

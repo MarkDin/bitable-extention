@@ -23,8 +23,8 @@ const FieldAutoComplete = () => {
   const {
     recordFields,
     selection,
-    selectedCellValue,
     refreshSelection,
+    selectedCellValue,
     loading: feishuLoading
   } = useFeishuBase();
 
@@ -99,26 +99,13 @@ const FieldAutoComplete = () => {
 
   };
 
-  // Sample preview data - this would normally come from the API
-  const previewData = searchPerformed ? {
-    name: "字节跳动有限公司",
-    industry: "互联网/科技服务",
-    logo: bytedanceLogo,
-    fields: [
-      { field: "法定代表人", oldValue: null, newValue: "张一鸣", status: "unchanged" as const },
-      { field: "注册资本", oldValue: "1亿美元", newValue: "3亿美元", status: "changed" as const },
-      { field: "注册地址", oldValue: null, newValue: "北京市海淀区知春路甲48号", status: "unchanged" as const },
-      { field: "成立日期", oldValue: null, newValue: "2012-03-09", status: "unchanged" as const },
-      { field: "经营范围", oldValue: null, newValue: "开发、设计、经营计算机软件；设计、制作、代理、发布广告；技术开发、技术转让、...", status: "added" as const },
-    ]
-  } : null;
-
   // Function to detect selection changes and update search query
   const handleDetectSelection = async () => {
     await refreshSelection();
     const selectedValue = useFeishuBaseStore.getState().selectedCellValue;
     const selection = useFeishuBaseStore.getState().selection;
     if (selectedValue) {
+      console.log('selectedValue', selectedValue);
       toast({
         title: "已检测到选中单元格",
         description: `字段: ${selection?.fieldId}, 值: ${selectedValue}`,
@@ -172,7 +159,8 @@ const FieldAutoComplete = () => {
       await refreshSelection();
       await autoCompleteFields({
         toast,
-        selectedFields
+        selectedFields,
+        singleComplate: false
       });
     } catch (e: any) {
       toast({ title: "补全失败", description: e.message, variant: "destructive" });
@@ -287,12 +275,6 @@ const FieldAutoComplete = () => {
           onSelectionChange={setSelectedFields}
         />
       </div>
-
-      {/* Data Preview */}
-      <DataPreview
-        data={previewData}
-        isLoading={isSearching}
-      />
 
       {/* Footer */}
       <footer className="px-4 py-3 border-t border-[#E5E6EB]">

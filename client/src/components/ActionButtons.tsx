@@ -17,16 +17,8 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
 }) => {
   return (
     <div className="flex space-x-2">
-      <Button 
-        variant="outline" 
-        className="flex-1 text-[#1F2329] bg-white border-[#E5E6EB]"
-        onClick={onCancel}
-        disabled={isLoading}
-      >
-        取消
-      </Button>
-      <Button 
-        className="flex-1 bg-primary text-white" 
+      <Button
+        className="flex-1 bg-primary text-white"
         onClick={onApply}
         disabled={isLoading}
       >

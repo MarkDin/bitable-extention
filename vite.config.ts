@@ -25,10 +25,10 @@ export default defineConfig({
   },
   server: {
     port: 5000,
-    allowedHosts: true
-    // https: {
-    //   key: await import('fs').then(fs => fs.readFileSync("key.pem")),
-    //   cert: await import('fs').then(fs => fs.readFileSync("cert.pem")),
-    // },
+    allowedHosts: true,
+    https: {
+      key: await import('fs').then(fs => fs.readFileSync("key.pem")),
+      cert: await import('fs').then(fs => fs.readFileSync("cert.pem")),
+    },
   }
 });
