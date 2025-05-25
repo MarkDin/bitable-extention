@@ -227,16 +227,17 @@ const QRCodeDebug: React.FC = () => {
                 // 等待一帧确保DOM更新完成
                 await new Promise(resolve => requestAnimationFrame(resolve));
 
-                // 配置参数
+                // 配置参数 - 使用旧版登录流程的参数格式
                 const config = {
-                    app_id: 'cli_a8848b72377ad00e',
+                    client_id: 'cli_a8848b72377ad00e',  // 注意：旧版使用client_id而不是app_id
                     redirect_uri: 'https://bitable-extention-dk1543100966.replit.app/auth/callback',
+                    response_type: 'code',  // 旧版必须包含response_type
                     state: 'debug_' + Date.now()
                 };
 
                 addLog(`配置: ${JSON.stringify(config)}`);
 
-                // 构建授权URL
+                // 构建授权URL - 使用旧版登录流程地址
                 const params = new URLSearchParams(config);
                 const authUrl = `https://passport.feishu.cn/suite/passport/oauth/authorize?${params.toString()}`;
 
@@ -254,13 +255,27 @@ const QRCodeDebug: React.FC = () => {
                 const uniqueId = `qr-debug-container-${Date.now()}`;
                 container.id = uniqueId;
 
-                // 创建二维码
+                // 确保容器在DOM中
+                addLog(`容器ID: ${uniqueId}`);
+                addLog(`容器是否在DOM中: ${document.getElementById(uniqueId) !== null}`);
+
+                // 创建二维码 - 使用字符串类型的宽高
                 const qrInstance = window.QRLogin({
                     id: uniqueId,
                     goto: authUrl,
-                    width: '250',
+                    width: '250',  // 固定尺寸250x250
                     height: '250'
                 });
+
+                // 再次检查容器
+                setTimeout(() => {
+                    const checkContainer = document.getElementById(uniqueId);
+                    if (checkContainer) {
+                        addLog(`QRLogin后容器存在，子元素数量: ${checkContainer.children.length}`);
+                    } else {
+                        addLog('错误：QRLogin后容器不存在！');
+                    }
+                }, 100);
 
                 qrInstanceRef.current = qrInstance;
                 addLog('QRLogin调用完成');

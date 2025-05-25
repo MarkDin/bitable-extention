@@ -1,7 +1,7 @@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { buildAuthUrl, type FeishuAuthConfig } from '@/lib/feishuAuth';
+import { type FeishuAuthConfig } from '@/lib/feishuAuth';
 import { Loader2, QrCode, RefreshCw } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 
@@ -97,17 +97,22 @@ const FeishuQRLogin: React.FC<FeishuQRLoginProps> = ({
                     }
                 }
 
-                // 构建授权URL
-                const authUrl = buildAuthUrl(config);
+                // 构建授权URL - 使用旧版登录流程格式
+                const CLIENT_ID = config.clientId;
+                const REDIRECT_URI = encodeURIComponent(config.redirectUri);
+                const STATE = config.state || 'feishu_login_' + Date.now();
 
-                // 创建QR登录实例
-                const uniqueId = 'feishu-qr-container-' + Date.now();
+                // 使用旧版登录流程地址（与SimpleFeishuQR相同的格式）
+                const authUrl = `https://passport.feishu.cn/suite/passport/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&state=${STATE}`;
+
+                console.log('FeishuQRLogin - 授权URL:', authUrl);
+
+                // 创建QR登录实例 - 使用固定的容器ID
                 const qrLoginInstance = window.QRLogin({
-                    id: uniqueId,
+                    id: 'feishu-qr-container',  // 使用固定ID，与下面的div id对应
                     goto: authUrl,
-                    width: '300',
-                    height: '300',
-                    style: 'width:300px;height:350px;display:flex;align-items:center;justify-content:center;'
+                    width: '250',  // 固定尺寸250x250
+                    height: '250'
                 });
 
                 qrLoginRef.current = qrLoginInstance;
@@ -175,13 +180,16 @@ const FeishuQRLogin: React.FC<FeishuQRLoginProps> = ({
                 console.warn('清理容器时出错:', e);
             }
         }
+
+        // 强制重新加载SDK状态，触发useEffect重新执行
+        setIsSDKLoaded(false);
         setIsLoading(true);
         setError('');
 
-        // 触发重新初始化
+        // 延迟后重新设置SDK已加载状态
         setTimeout(() => {
-            if (isSDKLoaded) {
-                // 重新初始化逻辑会在useEffect中执行
+            if (typeof window.QRLogin === 'function') {
+                setIsSDKLoaded(true);
             }
         }, 100);
     };
