@@ -1,21 +1,15 @@
 import ActionButtons from "@/components/ActionButtons";
-import DataPreview from "@/components/DataPreview";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import CompletableFields from "@/components/CompletableFields";
-import { Field, getConfig } from "@/lib/dataSync";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserInfo } from "@/components/UserInfo";
 import { useFeishuBase } from "@/hooks/use-feishu-base";
 import { useToast } from "@/hooks/use-toast";
 import { useFeishuBaseStore } from "@/hooks/useFeishuBaseStore";
 import { apiService } from "@/lib/apiService";
 import { autoCompleteFields } from "@/lib/autoCompleteHelper";
+import { Field, getConfig } from "@/lib/dataSync";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import bytedanceLogo from "../assets/tech-logos/bytedance.svg";
 // import { applyUpdate } from "@/hooks/useApplyUpdate";
 
 const FieldAutoComplete = () => {
@@ -66,16 +60,13 @@ const FieldAutoComplete = () => {
   // 搜索变更 - 直接使用apiService
   const { mutate: searchMutate, isPending: isSearching } = useMutation({
     mutationFn: async () => {
-      const activeTable = useFeishuBaseStore.getState().activeTable;
-      if (!activeTable) throw new Error('表格未初始化');
       const result = await apiService.search({
-        activeTable: activeTable,
         query: searchQuery,
         field: queryField,
         apiConfigId: dataSource,
         selection: selection || undefined
       });
-      // return createResponse(result);
+      return result;
     },
     onSuccess: () => {
       setSearchPerformed(true);
@@ -233,26 +224,6 @@ const FieldAutoComplete = () => {
           </Select>
         </div>
 
-        {/* Search Query Input */}
-        <div className="mb-6">
-          <div className="mb-1 text-sm font-medium flex items-center">
-            搜索值
-            {selectedCellValue === searchQuery && selectedCellValue && (
-              <span className="ml-2 text-[#165DFF] bg-[#E8F3FF] text-xs px-2 py-0.5 rounded">自动填充</span>
-            )}
-          </div>
-          <div className="flex space-x-2">
-            <Input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="输入要搜索的值"
-              className={`text-sm ${selectedCellValue === searchQuery && selectedCellValue ? "border-[#165DFF]" : ""}`}
-            />
-            <Button onClick={handleSearch} disabled={isSearching}>
-              {isSearching ? "搜索中..." : "搜索"}
-            </Button>
-          </div>
-        </div>
 
         {/* Data Source Section */}
         <div className="mb-6">
@@ -281,7 +252,7 @@ const FieldAutoComplete = () => {
         <ActionButtons
           onCancel={handleCancel}
           onApply={handleApply}
-          // isLoading={isUpdating}
+        // isLoading={isUpdating}
         />
       </footer>
 

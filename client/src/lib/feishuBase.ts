@@ -2,8 +2,7 @@
 // In a real implementation, we would import the actual SDK
 // import { bitable } from '@lark-base-open/js-sdk';
 
-import { bitable, FieldType, IOpenSegment, ITable } from '@lark-base-open/js-sdk';
-import { IAddFieldConfig } from '@lark-base-open/js-sdk';
+import { bitable, IAddFieldConfig, ITable } from '@lark-base-open/js-sdk';
 export interface User {
   userId: string;
   baseUserId: string;
@@ -132,8 +131,8 @@ export const feishuBase = {
       }
 
       // 直接更新记录
-      if (record.update) {
-        await record.update(fieldValueMap);
+      if (record && typeof record === 'object' && 'update' in record && typeof record.update === 'function') {
+        await (record as any).update(fieldValueMap);
         return;
       }
     } catch (err) {

@@ -5,6 +5,8 @@ const BASE_URL = "https://crm-data-service-dk1543100966.replit.app/customer_info
 
 
 export async function getCustomerInfoById(id: number | string): Promise<Record<string, any>> {
+  // FIXME: 实现从API获取客户信息的逻辑
+  return {};
 
   // const url = `${BASE_URL}${id}`;
   // const res = await fetch(url);

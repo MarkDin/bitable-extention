@@ -79,7 +79,7 @@ export const apiService = {
   getApiConfigurations: async (): Promise<ApiConfiguration[]> => {
     try {
       const data = await bitable.bridge.getData(STORAGE_KEYS.API_CONFIGURATIONS);
-      return data ? JSON.parse(data) : [];
+      return data ? JSON.parse(data as string) : [];
     } catch (error) {
       console.error('获取API配置失败:', error);
       return [];
@@ -166,7 +166,7 @@ export const apiService = {
     try {
       const data = await bitable.bridge.getData(STORAGE_KEYS.API_CONFIGURATIONS);
       console.log('getAllFieldMappings config:', data);
-      return data ? JSON.parse(data) : [];
+      return data ? JSON.parse(data as string) : [];
     } catch (error) {
       console.error('获取所有字段映射失败:', error);
       return [];
@@ -323,7 +323,12 @@ export const apiService = {
     for (const recordId of recordIds) {
       const record = await activeTable?.getCellValue(fieldId, recordId);
       if (record) {
-        values.push(record[0].text);
+        // 处理不同类型的单元格值
+        if (Array.isArray(record) && record[0] && typeof record[0] === 'object' && 'text' in record[0]) {
+          values.push(record[0].text);
+        } else {
+          values.push(String(record));
+        }
       } else {
         console.error(`获取单元格值失败(recordId:${recordId}, fieldId:${fieldId})`);
         values.push(null);

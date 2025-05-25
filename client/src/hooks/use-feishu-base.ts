@@ -1,7 +1,7 @@
 import { feishuBase } from '@/lib/feishuBase';
 import { useEffect, useState } from 'react';
-import { useFeishuBaseStore } from './useFeishuBaseStore';
 import { toast } from './use-toast';
+import { useFeishuBaseStore } from './useFeishuBaseStore';
 
 export function useFeishuBase() {
   // 全局状态
@@ -101,7 +101,7 @@ export function useFeishuBase() {
             currentSelection.recordId,
             currentSelection.fieldId
           );
-          setSelectedCellValue(value[0].text);
+          setSelectedCellValue(Array.isArray(value) && value[0] && typeof value[0] === 'object' && 'text' in value[0] ? value[0].text : String(value));
           return value;
         } catch (err) {
           console.error('Error getting field value:', err);
