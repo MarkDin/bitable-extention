@@ -47,13 +47,14 @@ export function buildAuthUrl(config: FeishuAuthConfig): string {
     localStorage.setItem('feishu_auth_state', state);
 
     const params = new URLSearchParams({
-        client_id: config.clientId,
+        app_id: config.clientId,
         redirect_uri: config.redirectUri,
         response_type: 'code',
         state: state,
         scope: 'user:read'
     });
-
+    console.log('login params', params.toString());
+    // 使用正确的飞书扫码登录端点
     return `https://passport.feishu.cn/suite/passport/oauth/authorize?${params.toString()}`;
 }
 
@@ -72,7 +73,8 @@ export async function getUserAccessToken(code: string, config: FeishuAuthConfig)
         },
         body: JSON.stringify({
             grant_type: 'authorization_code',
-            client_id: config.clientId,
+            app_id: config.clientId,
+            app_secret: '', // 注意：客户端应用通常不需要app_secret
             code: code,
             redirect_uri: config.redirectUri
         })

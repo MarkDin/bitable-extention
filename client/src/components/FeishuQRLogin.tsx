@@ -81,22 +81,29 @@ const FeishuQRLogin: React.FC<FeishuQRLoginProps> = ({
     useEffect(() => {
         if (!isSDKLoaded || !containerRef.current) return;
 
+        let messageHandler: ((event: MessageEvent) => void) | null = null;
+
         const initQRCode = () => {
             try {
                 setIsLoading(true);
                 setError('');
 
-                // 清空容器
-                if (containerRef.current) {
-                    containerRef.current.innerHTML = '';
+                // 安全地清空容器
+                const container = containerRef.current;
+                if (container) {
+                    // 使用更安全的方式清空容器
+                    while (container.firstChild) {
+                        container.removeChild(container.firstChild);
+                    }
                 }
 
                 // 构建授权URL
                 const authUrl = buildAuthUrl(config);
 
                 // 创建QR登录实例
+                const uniqueId = 'feishu-qr-container-' + Date.now();
                 const qrLoginInstance = window.QRLogin({
-                    id: 'feishu-qr-container',
+                    id: uniqueId,
                     goto: authUrl,
                     width: '300',
                     height: '300',
@@ -106,7 +113,7 @@ const FeishuQRLogin: React.FC<FeishuQRLoginProps> = ({
                 qrLoginRef.current = qrLoginInstance;
 
                 // 监听扫码消息
-                const handleMessage = (event: MessageEvent) => {
+                messageHandler = (event: MessageEvent) => {
                     if (qrLoginInstance.matchOrigin(event.origin) && qrLoginInstance.matchData(event.data)) {
                         const loginTmpCode = event.data.tmp_code;
                         if (loginTmpCode) {
@@ -123,14 +130,10 @@ const FeishuQRLogin: React.FC<FeishuQRLoginProps> = ({
                 };
 
                 // 添加消息监听器
-                window.addEventListener('message', handleMessage);
+                window.addEventListener('message', messageHandler);
 
                 setIsLoading(false);
 
-                // 清理函数
-                return () => {
-                    window.removeEventListener('message', handleMessage);
-                };
             } catch (err) {
                 console.error('初始化二维码失败:', err);
                 setError('初始化二维码失败，请重试');
@@ -138,14 +141,39 @@ const FeishuQRLogin: React.FC<FeishuQRLoginProps> = ({
             }
         };
 
-        const cleanup = initQRCode();
-        return cleanup;
+        initQRCode();
+
+        // 清理函数
+        return () => {
+            if (messageHandler) {
+                window.removeEventListener('message', messageHandler);
+            }
+            // 安全地清理容器
+            const container = containerRef.current;
+            if (container) {
+                try {
+                    while (container.firstChild) {
+                        container.removeChild(container.firstChild);
+                    }
+                } catch (e) {
+                    console.warn('清理容器时出错:', e);
+                }
+            }
+        };
     }, [isSDKLoaded, config, onSuccess]);
 
     // 刷新二维码
     const refreshQRCode = () => {
-        if (containerRef.current) {
-            containerRef.current.innerHTML = '';
+        const container = containerRef.current;
+        if (container) {
+            // 安全地清空容器
+            try {
+                while (container.firstChild) {
+                    container.removeChild(container.firstChild);
+                }
+            } catch (e) {
+                console.warn('清理容器时出错:', e);
+            }
         }
         setIsLoading(true);
         setError('');
