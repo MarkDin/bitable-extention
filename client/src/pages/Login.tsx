@@ -101,8 +101,18 @@ const Login: React.FC = () => {
         try {
             setLoginStatus('processing');
 
-            // 构建重定向URL
-            const redirectUrl = `${FEISHU_CONFIG.redirectUri}?tmp_code=${tmpCode}`;
+            // 获取存储的state，如果没有则生成一个
+            let state = localStorage.getItem('feishu_auth_state');
+            if (!state) {
+                state = 'feishu_qr_' + Date.now();
+                localStorage.setItem('feishu_auth_state', state);
+            }
+
+            // 构建重定向URL - 将tmp_code作为code参数传递
+            const redirectUrl = `${FEISHU_CONFIG.redirectUri}?code=${tmpCode}&state=${state}`;
+
+            console.log('扫码成功，重定向到:', redirectUrl);
+            console.log('使用的state:', state);
 
             // 重定向到回调处理
             window.location.href = redirectUrl;

@@ -100,12 +100,16 @@ const FeishuQRLogin: React.FC<FeishuQRLoginProps> = ({
                 // 构建授权URL - 使用旧版登录流程格式
                 const CLIENT_ID = config.clientId;
                 const REDIRECT_URI = encodeURIComponent(config.redirectUri);
-                const STATE = config.state || 'feishu_login_' + Date.now();
+                const STATE = config.state || 'feishu_qr_' + Date.now();
+
+                // 将state存储到localStorage中，以便后续验证
+                localStorage.setItem('feishu_auth_state', STATE);
 
                 // 使用旧版登录流程地址（与SimpleFeishuQR相同的格式）
                 const authUrl = `https://passport.feishu.cn/suite/passport/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&state=${STATE}`;
 
                 console.log('FeishuQRLogin - 授权URL:', authUrl);
+                console.log('FeishuQRLogin - State:', STATE);
 
                 // 创建QR登录实例 - 使用固定的容器ID
                 const qrLoginInstance = window.QRLogin({
