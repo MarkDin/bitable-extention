@@ -1,7 +1,8 @@
 import PluginLayout from "@/components/PluginLayout";
-import URLTest from "@/components/URLTest";
+import QRCodeDebug from "@/components/QRCodeDebug";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import URLTest from "@/components/URLTest";
 import { useFeishuBase } from "@/hooks/use-feishu-base";
 import ConfigManager from "@/pages/ConfigManager";
 import FieldAutoComplete from "@/pages/FieldAutoComplete";
@@ -19,6 +20,7 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/auth/callback" component={Login} />
       <Route path="/url-test" component={URLTest} />
+      <Route path="/qr-debug" component={QRCodeDebug} />
       <Route path="/">
         <PluginLayout>
           <FieldAutoComplete />
