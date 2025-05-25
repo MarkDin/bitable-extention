@@ -49,11 +49,10 @@ export function buildAuthUrl(config: FeishuAuthConfig): string {
     const params = new URLSearchParams({
         app_id: config.clientId,
         redirect_uri: config.redirectUri,
-        response_type: 'code',
-        state: state,
-        scope: 'user:read'
+        state: state
     });
     console.log('login params', params.toString());
+    console.log('redirect_uri', config.redirectUri);
     // 使用正确的飞书扫码登录端点
     return `https://passport.feishu.cn/suite/passport/oauth/authorize?${params.toString()}`;
 }

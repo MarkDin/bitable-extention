@@ -24,7 +24,7 @@ export function UserInfo({ showLogout = false }: UserInfoProps) {
   // 飞书认证配置 - 需要与Login页面保持一致
   const FEISHU_CONFIG = {
     clientId: import.meta.env.VITE_FEISHU_CLIENT_ID || 'cli_a8848b72377ad00e',
-    redirectUri: import.meta.env.VITE_FEISHU_REDIRECT_URI || `${window.location.origin}/auth/callback`
+    redirectUri: import.meta.env.VITE_FEISHU_REDIRECT_URI || 'https://bitable-extention-dk1543100966.replit.app/auth/callback'
   };
 
   const {

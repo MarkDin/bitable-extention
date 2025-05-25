@@ -22,9 +22,14 @@
 
 在飞书开放平台的应用设置中，需要添加以下重定向URI：
 
-**开发环境：**
+**本地开发环境：**
 ```
 http://localhost:5173/auth/callback
+```
+
+**Replit环境：**
+```
+https://bitable-extention-dk1543100966.replit.app/auth/callback
 ```
 
 **生产环境：**
@@ -173,10 +178,32 @@ const {
 npm run dev
 ```
 
-访问登录页面进行测试：
+### 调试页面
 
+**URL测试页面：** `/url-test`
+- 验证授权URL生成是否正确
+- 测试重定向URI配置
+- 查看URL参数解析
+
+**登录页面：** `/login`
+- 完整的登录流程测试
+- 二维码扫码登录
+
+**回调测试：** `/auth/callback?code=test123&state=teststate`
+- 测试OAuth回调处理
+
+### 环境访问地址
+
+**本地开发：**
 ```
 http://localhost:5173/login
+http://localhost:5173/url-test
+```
+
+**Replit环境：**
+```
+https://bitable-extention-dk1543100966.replit.app/login
+https://bitable-extention-dk1543100966.replit.app/url-test
 ```
 
 查看控制台日志了解详细的登录流程。

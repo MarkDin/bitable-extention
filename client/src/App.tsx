@@ -1,4 +1,5 @@
 import PluginLayout from "@/components/PluginLayout";
+import URLTest from "@/components/URLTest";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useFeishuBase } from "@/hooks/use-feishu-base";
@@ -17,6 +18,7 @@ function Router() {
     <Switch>
       <Route path="/login" component={Login} />
       <Route path="/auth/callback" component={Login} />
+      <Route path="/url-test" component={URLTest} />
       <Route path="/">
         <PluginLayout>
           <FieldAutoComplete />
