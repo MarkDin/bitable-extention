@@ -1,6 +1,5 @@
 import ActionButtons from "@/components/ActionButtons";
 import CompletableFields from "@/components/CompletableFields";
-import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useFeishuBase } from "@/hooks/use-feishu-base";
 import { useToast } from "@/hooks/use-toast";
@@ -8,6 +7,7 @@ import { useFeishuBaseStore } from "@/hooks/useFeishuBaseStore";
 import { apiService } from "@/lib/apiService";
 import { autoCompleteFields } from "@/lib/autoCompleteHelper";
 import { Field, getConfig } from "@/lib/dataSync";
+import { bitable } from "@lark-base-open/js-sdk";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 // import { applyUpdate } from "@/hooks/useApplyUpdate";
@@ -19,7 +19,8 @@ const FieldAutoComplete = () => {
     selection,
     refreshSelection,
     selectedCellValue,
-    loading: feishuLoading
+    loading: feishuLoading,
+    activeTable
   } = useFeishuBase();
 
   const [queryField, setQueryField] = useState<string>("");
@@ -28,6 +29,7 @@ const FieldAutoComplete = () => {
   const [searchPerformed, setSearchPerformed] = useState(false);
   const [completableFields, setCompletableFields] = useState<Field[]>([]);
   const [selectedFields, setSelectedFields] = useState<Field[]>([]);
+  const [tableName, setTableName] = useState<string>("");
 
   // 获取可补全字段配置
   useEffect(() => {
@@ -84,6 +86,32 @@ const FieldAutoComplete = () => {
     }
   });
 
+  useEffect(() => {
+    // 定义回调
+    const handleSelectionChange = async () => {
+      try {
+        const table = await bitable.base.getActiveTable();
+        if (table && typeof table.getName === "function") {
+          const name = await table.getName();
+          setTableName(name);
+        } else {
+          setTableName("");
+        }
+      } catch {
+        setTableName("");
+      }
+    };
+
+    // 注册监听
+    const off = bitable.base.onSelectionChange(handleSelectionChange);
+    // 初始化时主动获取一次
+    handleSelectionChange();
+
+    // 卸载时移除监听
+    return () => {
+      if (typeof off === "function") off();
+    };
+  }, []);
 
   // Handle toggling mapping active state
   const handleToggleMapping = (id: number, isActive: boolean) => {
@@ -145,13 +173,12 @@ const FieldAutoComplete = () => {
     setSearchPerformed(false);
   };
 
-  const handleApply = async (singleComplate: boolean) => {
+  const handleApply = async () => {
     try {
       await refreshSelection();
       await autoCompleteFields({
         toast,
-        selectedFields,
-        singleComplate: singleComplate
+        selectedFields
       });
     } catch (e: any) {
       toast({ title: "补全失败", description: e.message, variant: "destructive" });
@@ -161,36 +188,17 @@ const FieldAutoComplete = () => {
   return (
     <>
       <div className="p-4">
-        {/* Instruction */}
-        <div className="mb-4 p-3 bg-[#F2F3F5] rounded-md text-sm text-[#86909C]">
-          选择一个记录的字段值作为查询条件，然后自动填充其它相关字段。支持同时选择多行（最多50行）同时补全。
-        </div>
 
-        {/* Selection Detection */}
-        <div className="mb-6">
-          <Button
-            onClick={handleDetectSelection}
-            variant={selectedCellValue ? "default" : "outline"}
-            className="w-full mb-2"
-          >
-            {selectedCellValue ? "重新检测选中单元格" : "检测当前选中单元格"}
-          </Button>
-          {selectedCellValue && (
-            <div className="text-sm text-[#165DFF] bg-[#E8F3FF] p-3 rounded flex items-start">
-              <div className="w-4 h-4 mt-0.5 mr-2 rounded-full bg-[#165DFF] flex items-center justify-center text-white">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M20 6L9 17L4 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </div>
-              <div>
-                <div className="font-medium">已检测到选中单元格</div>
-                <div className="mt-1 text-xs text-[#4E5969]">
-                  字段: {recordFields.find(f => f.id === selection?.fieldId)?.name || selection?.fieldId}<br />
-                  值: {selectedCellValue}
-                </div>
-              </div>
-            </div>
-          )}
+        {/* Table Name Section */}
+        <div className="mb-4">
+          <label className="block text-base font-semibold mb-1">表格名称</label>
+          <input
+            type="text"
+            className="w-full px-3 py-2 border rounded bg-gray-100 text-base"
+            value={tableName || '未获取到表格名称'}
+            disabled
+            readOnly
+          />
         </div>
 
         {/* Field Selection Section */}

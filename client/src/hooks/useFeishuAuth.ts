@@ -13,6 +13,7 @@ import {
     storeAuthInfo
 } from '@/lib/feishuAuth';
 import { useCallback, useEffect, useState } from 'react';
+import { useFeishuBaseStore } from './useFeishuBaseStore';
 
 interface UseFeishuAuthReturn {
     isAuthenticated: boolean;
@@ -33,6 +34,9 @@ export function useFeishuAuth(config: FeishuAuthConfig): UseFeishuAuthReturn {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    // 获取全局store的setter
+    const setFeishuUserInfo = useFeishuBaseStore(state => state.setFeishuUserInfo);
+
     // 初始化认证状态
     useEffect(() => {
         const initAuth = () => {
@@ -47,6 +51,8 @@ export function useFeishuAuth(config: FeishuAuthConfig): UseFeishuAuthReturn {
                         setUser(storedUser);
                         setAccessToken(storedToken);
                         setIsAuthenticated(true);
+                        // 将用户信息保存到全局store
+                        setFeishuUserInfo(storedUser);
                     }
                 }
             } catch (err) {
@@ -58,7 +64,7 @@ export function useFeishuAuth(config: FeishuAuthConfig): UseFeishuAuthReturn {
         };
 
         initAuth();
-    }, []);
+    }, [setFeishuUserInfo]);
 
     // 检查token是否过期并自动刷新
     useEffect(() => {
@@ -99,10 +105,15 @@ export function useFeishuAuth(config: FeishuAuthConfig): UseFeishuAuthReturn {
             // 存储认证信息
             storeAuthInfo(tokenResponse, userInfo);
 
-            // 更新状态
+            // 更新本地状态
             setUser(userInfo);
             setAccessToken(tokenResponse.access_token);
             setIsAuthenticated(true);
+
+            // 将用户信息保存到全局store
+            setFeishuUserInfo(userInfo);
+
+            console.log('登录成功，用户信息已保存到store:', userInfo);
 
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : '登录失败';
@@ -111,7 +122,7 @@ export function useFeishuAuth(config: FeishuAuthConfig): UseFeishuAuthReturn {
         } finally {
             setIsLoading(false);
         }
-    }, [config]);
+    }, [config, setFeishuUserInfo]);
 
     // 登出函数
     const logout = useCallback(() => {
@@ -120,7 +131,10 @@ export function useFeishuAuth(config: FeishuAuthConfig): UseFeishuAuthReturn {
         setAccessToken(null);
         setIsAuthenticated(false);
         setError(null);
-    }, []);
+        // 清除全局store中的用户信息
+        setFeishuUserInfo(null);
+        console.log('用户已登出，store中的用户信息已清除');
+    }, [setFeishuUserInfo]);
 
     // 刷新令牌函数
     const refreshToken = useCallback(async () => {
@@ -135,9 +149,14 @@ export function useFeishuAuth(config: FeishuAuthConfig): UseFeishuAuthReturn {
             // 存储新的认证信息
             storeAuthInfo(tokenResponse, userInfo);
 
-            // 更新状态
+            // 更新本地状态
             setUser(userInfo);
             setAccessToken(tokenResponse.access_token);
+
+            // 更新全局store中的用户信息
+            setFeishuUserInfo(userInfo);
+
+            console.log('Token刷新成功，用户信息已更新到store:', userInfo);
 
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : '刷新令牌失败';
@@ -145,7 +164,7 @@ export function useFeishuAuth(config: FeishuAuthConfig): UseFeishuAuthReturn {
             console.error('刷新令牌失败:', err);
             throw err;
         }
-    }, [config]);
+    }, [config, setFeishuUserInfo]);
 
     // 清除错误
     const clearError = useCallback(() => {

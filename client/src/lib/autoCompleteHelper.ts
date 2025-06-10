@@ -3,15 +3,20 @@ import { apiService } from "@/lib/apiService";
 import { Field, mockGetDataByIds, MockGetDataByIdsResult } from "@/lib/dataSync";
 import type { ITable } from "@lark-base-open/js-sdk";
 import { bitable } from "@lark-base-open/js-sdk";
-import { feishuBase } from "./feishuBase";
 
 interface AutoCompleteParams {
   toast: (args: any) => void;
   selectedFields: Field[];
-  singleComplate: boolean;
 }
 
-export async function autoCompleteFields({ toast, selectedFields, singleComplate }: AutoCompleteParams) {
+interface RecordStatus {
+  recordId: string;
+  status: 'success' | 'error' | 'unchanged';
+  errorMessage?: string;
+  changedFields?: string[];
+}
+
+export async function autoCompleteFields({ toast, selectedFields }: AutoCompleteParams) {
   // 1. 读取配置字段
   console.log('selectedFields', selectedFields);
   if (!selectedFields.length) {
@@ -26,40 +31,30 @@ export async function autoCompleteFields({ toast, selectedFields, singleComplate
     toast?.({ title: "未选中表格", variant: "destructive" });
     return;
   }
-  console.log('selection', selection);
-  let selectedRecordIds: string[] = [];
-  if (singleComplate) {
-    selectedRecordIds = [selection.recordId || ""];
-  } else {
-    selectedRecordIds = await bitable.ui.selectRecordIdList(activeTable.id, selection.viewId || "");
-  }
-  // 检查是否有选中记录
-  if (!selectedRecordIds || selectedRecordIds.length === 0) {
-    toast?.({ title: "未选中记录", variant: "destructive" });
+
+  // 获取所有记录
+  const view = await activeTable.getActiveView();
+  const recordIdListRaw = await view.getVisibleRecordIdList();
+  // 过滤掉undefined值
+  const recordIdList = recordIdListRaw.filter((id): id is string => id !== undefined);
+
+  if (!recordIdList || recordIdList.length === 0) {
+    toast?.({ title: "表格中没有记录", variant: "destructive" });
     return;
   }
 
-  // 限制最大处理行数为50
-  const recordIds = selectedRecordIds.slice(0, 50);
-  if (selectedRecordIds.length > 50) {
-    toast?.({
-      title: "选中行数过多",
-      description: `已限制为最大50行，当前处理${recordIds.length}行`,
-      variant: "warning"
-    });
-  }
-
   // 获取查询字段信息
-  const selectedCellValue = await apiService.getCellValues(activeTable, recordIds, selection.fieldId || "");
+  const selectedCellValue = await apiService.getCellValues(activeTable, recordIdList, selection.fieldId || "");
   console.log('selectedCellValue', selectedCellValue);
   if (!selectedCellValue) {
     toast?.({ title: "未获取到查询值", variant: "destructive" });
     return;
   }
+
   // 建立selectedCellValue的映射
   const selectedCellValueMap: Record<string, string> = {};
-  for (let i = 0; i < recordIds.length; i++) {
-    selectedCellValueMap[recordIds[i]] = selectedCellValue[i];
+  for (let i = 0; i < recordIdList.length; i++) {
+    selectedCellValueMap[recordIdList[i]] = selectedCellValue[i];
   }
 
   // 2. 获取数据
@@ -100,28 +95,161 @@ export async function autoCompleteFields({ toast, selectedFields, singleComplate
     fieldNameToId[name] = f.id;
   }
 
-  // 6. 为每条选中记录写入数据
-  let successCount = 0;
-  for (const recordId of recordIds) {
+  // 6. 为每条记录写入数据，并追踪状态
+  const recordStatuses: RecordStatus[] = [];
+
+  for (const recordId of recordIdList) {
+    const recordStatus: RecordStatus = {
+      recordId,
+      status: 'unchanged',
+      changedFields: []
+    };
+
     try {
+      const queryValue = selectedCellValueMap[recordId];
+
+      // 检查是否有查询结果
+      if (!resultFields[queryValue]) {
+        recordStatus.status = 'error';
+        recordStatus.errorMessage = '查询无结果';
+        recordStatuses.push(recordStatus);
+        continue;
+      }
+
+      // 对比并更新每个字段
       for (const field of selectedFields) {
-        console.log('recordId', selectedCellValueMap[recordId]);
         const fieldName = field.mapping_field;
-        console.log('resultFields[recordId]', resultFields[selectedCellValueMap[recordId]]);
-        const value = resultFields[selectedCellValueMap[recordId]][field.name];
-        console.log('fieldName', field.name, 'value', value);
-        if (fieldNameToId[fieldName] && value !== undefined) {
-          await activeTable.setCellValue(fieldNameToId[fieldName], recordId, value);
+        const fieldId = fieldNameToId[fieldName];
+
+        if (!fieldId) continue;
+
+        const newValue = resultFields[queryValue][field.name];
+        if (newValue === undefined) continue;
+
+        // 获取当前值
+        const currentValue = await activeTable.getCellValue(fieldId, recordId);
+        let currentValueStr = '';
+
+        // 处理不同类型的单元格值
+        if (currentValue === null || currentValue === undefined) {
+          currentValueStr = '';
+        } else if (Array.isArray(currentValue)) {
+          // 处理数组类型（如文本、选项等）
+          if (currentValue.length > 0 && typeof currentValue[0] === 'object' && 'text' in currentValue[0]) {
+            currentValueStr = currentValue[0].text;
+          } else {
+            currentValueStr = currentValue.join(', ');
+          }
+        } else if (typeof currentValue === 'object') {
+          // 处理对象类型
+          if ('text' in currentValue) {
+            currentValueStr = (currentValue as any).text;
+          } else {
+            currentValueStr = String(currentValue);
+          }
+        } else {
+          // 处理基本类型
+          currentValueStr = String(currentValue);
+        }
+
+        // 对比值是否变化
+        if (currentValueStr !== String(newValue)) {
+          await activeTable.setCellValue(fieldId, recordId, newValue);
+          recordStatus.changedFields?.push(fieldName);
+          recordStatus.status = 'success';
         }
       }
-      successCount++;
-    } catch (error) {
+    } catch (error: any) {
+      recordStatus.status = 'error';
+      recordStatus.errorMessage = error.message || '写入失败';
       console.error(`Failed to update record ${recordId}:`, error);
     }
+
+    recordStatuses.push(recordStatus);
   }
+
+  // 统计结果
+  const successCount = recordStatuses.filter(r => r.status === 'success').length;
+  const errorCount = recordStatuses.filter(r => r.status === 'error').length;
+  const unchangedCount = recordStatuses.filter(r => r.status === 'unchanged').length;
+
+  // 标记记录颜色
+  await markRecordColors(activeTable, recordStatuses);
+
+  // 显示结果
+  let description = `成功更新: ${successCount}条`;
+  if (unchangedCount > 0) description += `, 无变化: ${unchangedCount}条`;
+  if (errorCount > 0) description += `, 失败: ${errorCount}条`;
 
   toast?.({
     title: "补全完成",
-    description: `已成功处理${successCount}/${recordIds.length}条记录`
+    description,
+    variant: errorCount > 0 ? "destructive" : "default"
   });
+}
+
+// 标记记录颜色的辅助函数
+async function markRecordColors(table: ITable, statuses: RecordStatus[]) {
+  try {
+    // 获取所有字段
+    const fields = await table.getFieldList();
+
+    // 查找或创建状态字段
+    let statusFieldId: string | null = null;
+    const statusFieldName = '补全状态';
+
+    for (const field of fields) {
+      const fieldName = await field.getName();
+      if (fieldName === statusFieldName) {
+        statusFieldId = field.id;
+        break;
+      }
+    }
+
+    // 如果没有状态字段，创建一个
+    if (!statusFieldId) {
+      try {
+        const newField = await table.addField({
+          name: statusFieldName,
+          type: 1 // FieldType.Text
+        });
+        statusFieldId = newField;
+      } catch (error) {
+        console.warn('创建状态字段失败:', error);
+      }
+    }
+
+    // 为每条记录设置状态文本
+    if (statusFieldId) {
+      for (const status of statuses) {
+        let statusText = '';
+        let statusEmoji = '';
+
+        switch (status.status) {
+          case 'success':
+            statusEmoji = '🟡';  // 黄色圆圈表示有变化
+            statusText = `${statusEmoji} 已更新 (${status.changedFields?.length || 0}个字段)`;
+            break;
+          case 'unchanged':
+            statusEmoji = '⚪';  // 白色圆圈表示无变化
+            statusText = `${statusEmoji} 无变化`;
+            break;
+          case 'error':
+            statusEmoji = '🔴';  // 红色圆圈表示错误
+            statusText = `${statusEmoji} 失败: ${status.errorMessage || '未知错误'}`;
+            break;
+        }
+
+        try {
+          await table.setCellValue(statusFieldId, status.recordId, statusText);
+        } catch (error) {
+          console.warn(`设置状态失败 (recordId: ${status.recordId}):`, error);
+        }
+      }
+    }
+
+    console.log('记录状态标记完成');
+  } catch (error) {
+    console.error('标记记录状态失败:', error);
+  }
 } 

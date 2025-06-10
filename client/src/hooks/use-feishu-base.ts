@@ -1,3 +1,4 @@
+import { getStoredUserInfo, type FeishuUserInfo } from '@/lib/feishuAuth';
 import { feishuBase } from '@/lib/feishuBase';
 import { useEffect, useState } from 'react';
 import { toast } from './use-toast';
@@ -17,6 +18,11 @@ export function useFeishuBase() {
   const setCurrentUser = useFeishuBaseStore(state => state.setCurrentUser);
   const selectedCellValue = useFeishuBaseStore(state => state.selectedCellValue);
   const setSelectedCellValue = useFeishuBaseStore(state => state.setSelectedCellValue);
+
+  // 飞书认证用户信息
+  const feishuUserInfo = useFeishuBaseStore(state => state.feishuUserInfo);
+  const setFeishuUserInfo = useFeishuBaseStore(state => state.setFeishuUserInfo);
+
   // 本地状态
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,6 +33,12 @@ export function useFeishuBase() {
       setError(null);
 
       try {
+        // 加载存储的飞书用户信息
+        const storedUserInfo = getStoredUserInfo();
+        if (storedUserInfo) {
+          setFeishuUserInfo(storedUserInfo);
+        }
+
         // Get current user information
         const user = await feishuBase.getCurrentUser();
         setCurrentUser(user);
@@ -116,6 +128,27 @@ export function useFeishuBase() {
     }
   };
 
+  // 更新飞书用户信息的方法
+  const updateFeishuUserInfo = (userInfo: FeishuUserInfo | null) => {
+    setFeishuUserInfo(userInfo);
+  };
+
+  // 用户权限检查辅助方法
+  const checkUserPermission = (requiredPermission?: string) => {
+    if (!feishuUserInfo) {
+      return {
+        hasPermission: false,
+        reason: '用户未登录'
+      };
+    }
+
+    // 这里可以根据实际需求添加权限检查逻辑
+    // 例如检查用户的tenant_key、user_id等信息
+    return {
+      hasPermission: true,
+      userInfo: feishuUserInfo
+    };
+  };
 
   return {
     activeTable,
@@ -127,6 +160,10 @@ export function useFeishuBase() {
     error,
     updateRecord,
     refreshSelection,
-    selectedCellValue
+    selectedCellValue,
+    // 飞书认证用户信息相关
+    feishuUserInfo,
+    updateFeishuUserInfo,
+    checkUserPermission
   };
 }

@@ -1,3 +1,4 @@
+import type { FeishuUserInfo } from '@/lib/feishuAuth';
 import type { Selection, User } from '@/lib/feishuBase';
 import type { IFieldMeta, ITable } from '@lark-base-open/js-sdk';
 import { create } from 'zustand';
@@ -24,6 +25,10 @@ interface FeishuBaseState {
 
   selectedCellValue: any;
   setSelectedCellValue: (value: any) => void;
+
+  // 飞书认证用户信息
+  feishuUserInfo: FeishuUserInfo | null;
+  setFeishuUserInfo: (userInfo: FeishuUserInfo | null) => void;
 }
 
 export const useFeishuBaseStore = create<FeishuBaseState>((set) => ({
@@ -47,4 +52,8 @@ export const useFeishuBaseStore = create<FeishuBaseState>((set) => ({
 
   selectedCellValue: null,
   setSelectedCellValue: (selectedCellValue) => set({ selectedCellValue }),
+
+  // 飞书认证用户信息
+  feishuUserInfo: null,
+  setFeishuUserInfo: (feishuUserInfo) => set({ feishuUserInfo }),
 })); 

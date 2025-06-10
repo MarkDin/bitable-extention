@@ -9,6 +9,7 @@ import ConfigManager from "@/pages/ConfigManager";
 import FieldAutoComplete from "@/pages/FieldAutoComplete";
 import Login from "@/pages/Login";
 import NotFound from "@/pages/not-found";
+import PermissionManager from "@/pages/PermissionManager";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Route, Switch, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
@@ -36,6 +37,11 @@ function Router() {
       <Route path="/config-manager">
         <PluginLayout>
           <ConfigManager />
+        </PluginLayout>
+      </Route>
+      <Route path="/permission-manager">
+        <PluginLayout>
+          <PermissionManager />
         </PluginLayout>
       </Route>
       <Route component={NotFound} />
