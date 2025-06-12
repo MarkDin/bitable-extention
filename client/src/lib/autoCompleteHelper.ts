@@ -7,6 +7,7 @@ import { bitable } from "@lark-base-open/js-sdk";
 interface AutoCompleteParams {
   toast: (args: any) => void;
   selectedFields: Field[];
+  queryFieldId: string;
 }
 
 interface RecordStatus {
@@ -16,11 +17,18 @@ interface RecordStatus {
   changedFields?: string[];
 }
 
-export async function autoCompleteFields({ toast, selectedFields }: AutoCompleteParams) {
+export async function autoCompleteFields({ toast, selectedFields, queryFieldId }: AutoCompleteParams) {
   // 1. 读取配置字段
-  console.log('selectedFields', selectedFields);
+  console.log('[AutoComplete] selectedFields:', selectedFields);
+  console.log('[AutoComplete] queryFieldId:', queryFieldId);
+
   if (!selectedFields.length) {
     toast?.({ title: "未配置补全字段", variant: "destructive" });
+    return;
+  }
+
+  if (!queryFieldId) {
+    toast?.({ title: "未选择查询字段", variant: "destructive" });
     return;
   }
 
@@ -37,15 +45,15 @@ export async function autoCompleteFields({ toast, selectedFields }: AutoComplete
   const recordIdListRaw = await view.getVisibleRecordIdList();
   // 过滤掉undefined值
   const recordIdList = recordIdListRaw.filter((id): id is string => id !== undefined);
-
+  console.log('[AutoComplete] recordIdList:', recordIdList);
   if (!recordIdList || recordIdList.length === 0) {
     toast?.({ title: "表格中没有记录", variant: "destructive" });
     return;
   }
 
-  // 获取查询字段信息
-  const selectedCellValue = await apiService.getCellValues(activeTable, recordIdList, selection.fieldId || "");
-  console.log('selectedCellValue', selectedCellValue);
+  // 获取查询字段信息 - 使用传入的 queryFieldId 而不是 selection.fieldId
+  const selectedCellValue = await apiService.getCellValues(activeTable, recordIdList, queryFieldId);
+  console.log('[AutoComplete] selectedCellValue:', selectedCellValue);
   if (!selectedCellValue) {
     toast?.({ title: "未获取到查询值", variant: "destructive" });
     return;

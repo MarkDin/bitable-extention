@@ -3,7 +3,6 @@ import CompletableFields from "@/components/CompletableFields";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useFeishuBase } from "@/hooks/use-feishu-base";
 import { useToast } from "@/hooks/use-toast";
-import { useFeishuBaseStore } from "@/hooks/useFeishuBaseStore";
 import { apiService } from "@/lib/apiService";
 import { autoCompleteFields } from "@/lib/autoCompleteHelper";
 import { Field, getConfig } from "@/lib/dataSync";
@@ -118,55 +117,7 @@ const FieldAutoComplete = () => {
 
   };
 
-  // Function to detect selection changes and update search query
-  const handleDetectSelection = async () => {
-    await refreshSelection();
-    const selectedValue = useFeishuBaseStore.getState().selectedCellValue;
-    const selection = useFeishuBaseStore.getState().selection;
-    if (selectedValue) {
-      console.log('selectedValue', selectedValue);
-      toast({
-        title: "已检测到选中单元格",
-        description: `字段: ${selection?.fieldId}, 值: ${selectedValue}`,
-      });
 
-      // If we have both field and value, auto search
-      if (selection?.fieldId && selectedValue) {
-        // Check if the field has changed
-        if (queryField !== selection.fieldId) {
-          setQueryField(selection.fieldId);
-        }
-
-        // If search term is different, update it
-        if (searchQuery !== selectedValue) {
-          setSearchQuery(selectedValue);
-        }
-
-        // Auto-search if field and value are valid and there's a change
-        if (selection.fieldId && selectedValue && dataSource) {
-          searchMutate();
-        }
-      }
-    } else {
-      toast({
-        title: "未检测到选中单元格",
-        description: "请在表格中选择一个单元格",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleSearch = () => {
-    if (!queryField || !searchQuery) {
-      toast({
-        title: "请完成所有字段",
-        description: "查询字段和搜索值不能为空",
-        variant: "destructive",
-      });
-      return;
-    }
-    searchMutate();
-  };
 
   const handleCancel = () => {
     setSearchQuery("");
@@ -175,12 +126,21 @@ const FieldAutoComplete = () => {
 
   const handleApply = async () => {
     try {
-      await refreshSelection();
+      console.log('[FieldAutoComplete] 开始补全，queryField:', queryField);
+
+      if (!queryField) {
+        toast({ title: "请先选择查询字段", variant: "destructive" });
+        return;
+      }
+
+      // await refreshSelection();
       await autoCompleteFields({
         toast,
-        selectedFields
+        selectedFields,
+        queryFieldId: queryField
       });
     } catch (e: any) {
+      console.error('[FieldAutoComplete] 补全失败:', e);
       toast({ title: "补全失败", description: e.message, variant: "destructive" });
     }
   };
