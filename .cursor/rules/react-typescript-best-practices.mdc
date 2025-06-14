@@ -1,0 +1,110 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# React TypeScript 最佳实践
+
+## 项目技术栈
+- React 18 + TypeScript
+- Vite 构建工具
+- Tailwind CSS + shadcn/ui 组件库
+- React Query (TanStack Query) 数据管理
+
+## 组件开发规范
+
+### 组件结构
+参考 [client/src/components/CompletableFields.tsx](mdc:client/src/components/CompletableFields.tsx) 的组件结构：
+```typescript
+interface ComponentProps {
+  // 明确的 props 类型定义
+}
+
+export default function ComponentName({ prop1, prop2 }: ComponentProps) {
+  // hooks 在顶部
+  // 状态管理
+  // 副作用
+  // 事件处理函数
+  // 渲染逻辑
+}
+```
+
+### 状态管理
+- 使用 `useState` 管理本地状态
+- 复杂状态使用 `useReducer`
+- 副作用使用 `useEffect`，注意依赖数组
+- 避免不必要的重渲染，合理使用 `useMemo` 和 `useCallback`
+
+### 类型定义
+- 为所有 props 定义接口
+- 使用泛型提高代码复用性
+- 避免使用 `any`，优先使用具体类型
+- 复杂类型定义放在单独的 types 文件中
+
+## UI 组件使用
+
+### shadcn/ui 组件
+项目使用 shadcn/ui 组件库，组件位于 [client/src/components/ui/](mdc:client/src/components/ui/)：
+- Button, Input, Select, Checkbox 等基础组件
+- Toast 用于消息提示
+- 保持组件 API 一致性
+
+### 样式规范
+- 使用 Tailwind CSS 类名
+- 响应式设计：`sm:`, `md:`, `lg:` 前缀
+- 主题色彩：使用 CSS 变量定义的主题色
+- 间距：使用 Tailwind 的间距系统
+
+## 错误处理
+
+### 异步操作
+```typescript
+try {
+  const result = await asyncOperation();
+  // 处理成功结果
+} catch (error) {
+  console.error('操作失败:', error);
+  toast({
+    title: "错误",
+    description: "操作失败，请重试",
+    variant: "destructive",
+  });
+}
+```
+
+### 表单验证
+- 使用受控组件
+- 实时验证用户输入
+- 提供清晰的错误提示
+
+## 性能优化
+
+### 组件优化
+- 避免在渲染函数中创建对象和函数
+- 使用 `React.memo` 包装纯组件
+- 合理拆分组件，避免单个组件过于复杂
+
+### 数据获取
+- 使用 React Query 管理服务端状态
+- 实现适当的缓存策略
+- 避免重复请求
+
+## 代码组织
+
+### 文件命名
+- 组件文件使用 PascalCase：`ComponentName.tsx`
+- 工具函数使用 camelCase：`utilityFunction.ts`
+- 常量使用 UPPER_SNAKE_CASE
+
+### 导入顺序
+1. React 相关导入
+2. 第三方库导入
+3. 本地组件导入
+4. 工具函数导入
+5. 类型导入
+
+### 注释规范
+- 复杂逻辑添加注释说明
+- 使用 JSDoc 注释公共函数
+- TODO/FIXME 标记需要改进的代码
+

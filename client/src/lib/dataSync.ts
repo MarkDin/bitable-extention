@@ -32,6 +32,7 @@ export async function getCustomerInfoById(id: number | string): Promise<Record<s
 // 文档参考：https://lark-base-team.github.io/js-sdk-docs/zh/api/bridge
 
 const CONFIG_KEY = 'plugin_config_json';
+const MAPPING_CONFIG_KEY = 'mapping_config';
 
 /**
  * 存储配置（json对象）到多维表格
@@ -55,23 +56,48 @@ export async function setConfig(config: Config): Promise<boolean> {
 }
 
 /**
+ * 设置字段映射配置
+ * @param mappingConfig 字段映射配置数组
+ */
+export async function setMappingConfig(mappingConfig: Field[]): Promise<boolean> {
+  if (!Array.isArray(mappingConfig)) {
+    throw new Error('字段映射配置必须是一个数组');
+  }
+
+  for (const field of mappingConfig) {
+    if (!field.name || !field.mapping_field) {
+      throw new Error('字段映射配置中的每个字段必须包含 name 和 mapping_field 属性');
+    }
+  }
+
+  return await bitable.bridge.setData(MAPPING_CONFIG_KEY, mappingConfig);
+}
+
+/**
+ * 获取字段映射配置
+ */
+export async function getMappingConfig(): Promise<Field[] | null> {
+  return await bitable.bridge.getData<Field[]>(MAPPING_CONFIG_KEY);
+}
+
+/**
  * 获取多维表格中存储的配置（json对象）
  */
 export interface Field {
   name: string;
   mapping_field: string;
+  query_type?: 'customer' | 'order' | 'both'; // 字段适用的查询类型（已废弃，保留用于兼容性）
 }
+
 export interface Config {
   field_list: Field[];
 }
-export async function getConfig<T = Config>(): Promise<T | null> {
-  return await bitable.bridge.getData<T>(CONFIG_KEY);
-}
 
-// 使用示例：
-// await setConfig({a: 1, b: 2});
-// const config = await getConfig();
-// console.log(config);
+// 查询类型枚举
+export enum QueryType {
+  CUSTOMER = 'customer', // 客户简称
+  ORDER = 'order'        // 订单ID
+}
 
 export interface MockGetDataByIdsResult {
   success: boolean;
@@ -80,6 +106,7 @@ export interface MockGetDataByIdsResult {
   };
   error_msg?: string;
 }
+
 /**
  * mock 获取数据接口，模拟 api.md 中定义的接口
  * @param id_list 需要获取的 id 列表
@@ -102,4 +129,8 @@ export async function mockGetDataByIds(id_list: string[]): Promise<MockGetDataBy
     },
     error_msg: '',
   };
+}
+
+export async function getConfig<T = Config>(): Promise<T | null> {
+  return await bitable.bridge.getData<T>(CONFIG_KEY);
 }
