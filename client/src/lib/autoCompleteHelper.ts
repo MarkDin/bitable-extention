@@ -1,8 +1,6 @@
-import { useFeishuBaseStore } from "@/hooks/useFeishuBaseStore";
-import { apiService } from "@/lib/apiService";
 import { Field, mockGetDataByIds, MockGetDataByIdsResult } from "@/lib/dataSync";
 import type { ITable } from "@lark-base-open/js-sdk";
-import { bitable } from "@lark-base-open/js-sdk";
+import { bitable, FieldType } from "@lark-base-open/js-sdk";
 
 interface AutoCompleteParams {
   toast: (args: any) => void;
@@ -24,271 +22,236 @@ interface RecordStatus {
   changedFields?: string[];
 }
 
-export async function autoCompleteFields({
-  toast,
-  selectedFields,
-  queryFieldId,
-  onProgress,
-  onComplete
-}: AutoCompleteParams) {
-  // 1. 读取配置字段
+// 批量更新记录的数据结构
+interface BatchRecordUpdate {
+  recordId: string;
+  fields: Record<string, any>;
+}
 
-  if (!selectedFields.length) {
-    toast?.({ title: "未配置补全字段", variant: "destructive" });
-    return;
-  }
+export async function autoCompleteFields(params: AutoCompleteParams) {
+  const { toast, selectedFields, queryFieldId, onProgress, onComplete } = params;
 
-  if (!queryFieldId) {
-    toast?.({ title: "未选择查询字段", variant: "destructive" });
-    return;
-  }
-
-  // 获取当前选中的所有记录
-  const activeTable: ITable = await bitable.base.getActiveTable();
-  const selection = useFeishuBaseStore.getState().selection;
-  if (!selection) {
-    toast?.({ title: "未选中表格", variant: "destructive" });
-    return;
-  }
-
-  // 检查编辑权限
   try {
-    // 尝试获取表格信息来检查权限
-    await activeTable.getName();
-  } catch (error) {
-    console.error('[AutoComplete] 权限检查失败:', error);
-    onComplete?.({
-      status: 'no_permission',
-      successCount: 0,
-      errorCount: 0,
-      unchangedCount: 0
-    });
-    return;
-  }
+    console.log('[AutoComplete] 开始自动补全流程');
 
-  // 获取所有记录
-  const view = await activeTable.getActiveView();
-  const recordIdListRaw = await view.getVisibleRecordIdList();
-  // 过滤掉undefined值
-  const recordIdList = recordIdListRaw.filter((id): id is string => id !== undefined);
-  console.log('[AutoComplete] recordIdList:', recordIdList);
+    // 获取当前活动的数据表
+    const activeTable: ITable = await bitable.base.getActiveTable();
+    if (!activeTable) {
+      throw new Error('无法获取当前数据表');
+    }
 
-  const totalRecords = recordIdList.length;
+    // 获取所有记录
+    const recordIdList = await activeTable.getRecordIdList();
+    console.log(`[AutoComplete] 获取到 ${recordIdList.length} 条记录`);
 
-  if (!recordIdList || recordIdList.length === 0) {
-    toast?.({ title: "表格中没有记录", variant: "destructive" });
-    return;
-  }
-
-  // 初始化进度
-  onProgress?.(0, totalRecords);
-
-  // 获取查询字段信息 - 使用传入的 queryFieldId 而不是 selection.fieldId
-  const selectedCellValue = await apiService.getCellValues(activeTable, recordIdList, queryFieldId);
-  console.log('[AutoComplete] selectedCellValue:', selectedCellValue);
-  if (!selectedCellValue) {
-    toast?.({ title: "未获取到查询值", variant: "destructive" });
-    return;
-  }
-
-  // 建立selectedCellValue的映射
-  const selectedCellValueMap: Record<string, string> = {};
-  for (let i = 0; i < recordIdList.length; i++) {
-    selectedCellValueMap[recordIdList[i]] = selectedCellValue[i];
-  }
-
-  // 2. 获取数据
-  let result: MockGetDataByIdsResult;
-  try {
-    result = await mockGetDataByIds(selectedCellValue);
-  } catch (e: any) {
-    toast?.({ title: "获取数据失败", description: e.message, variant: "destructive" });
-    onComplete?.({
-      status: 'failed',
-      successCount: 0,
-      errorCount: totalRecords,
-      unchangedCount: 0
-    });
-    return;
-  }
-  if (!result.success) {
-    toast?.({ title: "获取数据失败", description: result.error_msg, variant: "destructive" });
-    onComplete?.({
-      status: 'failed',
-      successCount: 0,
-      errorCount: totalRecords,
-      unchangedCount: 0
-    });
-    return;
-  }
-  const resultFields = result.data.result_map;
-  console.log('resultFields', resultFields);
-
-  // 3. 检查表头
-  const tableFields = await apiService.getAllFields();
-  const allFieldNames = await Promise.all(tableFields.map((f: any) => f.getName()));
-  const missingFields = selectedFields.filter((f: Field) => !allFieldNames.includes(f.mapping_field));
-
-  // 4. 新建缺失表头
-  for (const field of missingFields) {
-    try {
-      await apiService.createField({
-        activeTable,
-        name: field.mapping_field,
-        type: 1 // FieldType.Text
-      });
-    } catch (error) {
-      console.error('[AutoComplete] 创建字段失败:', error);
-      // 如果创建字段失败，可能是权限问题
+    if (recordIdList.length === 0) {
+      toast({ type: 'warning', content: '当前数据表中没有记录' });
       onComplete?.({
-        status: 'no_permission',
+        status: 'success',
         successCount: 0,
         errorCount: 0,
         unchangedCount: 0
       });
       return;
     }
-  }
-  console.log('missingFields', missingFields);
 
-  // 5. 再次获取表头
-  const updatedFields = await apiService.getAllFields();
-  const fieldNameToId: Record<string, string> = {};
-  for (const f of updatedFields) {
-    const name = await f.getName();
-    fieldNameToId[name] = f.id;
-  }
+    // 1. 获取当前表格所有字段
+    let allFields = await activeTable.getFieldMetaList();
+    let existingFieldNames = allFields.map(f => f.name);
 
-  // 6. 为每条记录写入数据，并追踪状态
-  const recordStatuses: RecordStatus[] = [];
-  let completedCount = 0;
+    // 2. 找出需要新建的字段
+    const fieldsToCreate = selectedFields.filter(f => !existingFieldNames.includes(f.name));
 
-  for (const recordId of recordIdList) {
-    const recordStatus: RecordStatus = {
-      recordId,
-      status: 'unchanged',
-      changedFields: []
-    };
+    // 3. 新建缺失字段
+    for (const field of fieldsToCreate) {
+      // 统一使用文本类型
+      await activeTable.addField({ name: field.name, type: FieldType.Text });
+    }
 
-    try {
-      const queryValue = selectedCellValueMap[recordId];
+    // 4. 新建后重新获取字段列表，建立 name->id 映射
+    allFields = await activeTable.getFieldMetaList();
+    const fieldNameToId = Object.fromEntries(allFields.map(f => [f.name, f.id]));
 
-      // 检查是否有查询结果
-      if (!resultFields[queryValue]) {
-        recordStatus.status = 'error';
-        recordStatus.errorMessage = '查询无结果';
-        recordStatuses.push(recordStatus);
-        completedCount++;
-        onProgress?.(completedCount, totalRecords);
+    // 收集所有需要查询的值
+    const queryValues: string[] = [];
+    const recordQueryMap = new Map<string, string>();
+
+    for (const recordId of recordIdList) {
+      try {
+        const queryValue = await activeTable.getCellValue(queryFieldId, recordId);
+        if (queryValue && queryValue.toString().trim()) {
+          const trimmedValue = queryValue.toString().trim();
+          queryValues.push(trimmedValue);
+          recordQueryMap.set(recordId, trimmedValue);
+        }
+      } catch (error) {
+        console.warn(`[AutoComplete] 无法获取记录 ${recordId} 的查询字段值:`, error);
+      }
+    }
+
+    console.log(`[AutoComplete] 需要查询 ${queryValues.length} 个值`);
+
+    if (queryValues.length === 0) {
+      toast({ type: 'warning', content: '没有找到可用于查询的数据' });
+      onComplete?.({
+        status: 'success',
+        successCount: 0,
+        errorCount: 0,
+        unchangedCount: recordIdList.length
+      });
+      return;
+    }
+
+    // 调用API获取补全数据
+    onProgress?.(0, queryValues.length);
+    // 去重并打印queryValues
+    // const uniqueQueryValues = [...new Set(queryValues)];
+    // console.log('去重后的queryValues:', uniqueQueryValues);
+    const apiResult: MockGetDataByIdsResult = await mockGetDataByIds(queryValues);
+    console.log(`[AutoComplete] API返回 ${Object.keys(apiResult.data.result_map).length} 条数据`);
+
+    // 准备批量更新的数据
+    const batchUpdates: BatchRecordUpdate[] = [];
+    const recordStatuses: RecordStatus[] = [];
+
+    for (const recordId of recordIdList) {
+      const queryValue = recordQueryMap.get(recordId);
+      if (!queryValue) {
+        recordStatuses.push({
+          recordId,
+          status: 'unchanged'
+        });
         continue;
       }
 
-      // 对比并更新每个字段
+      const apiData = apiResult.data.result_map[queryValue];
+      if (!apiData) {
+        recordStatuses.push({
+          recordId,
+          status: 'unchanged'
+        });
+        continue;
+      }
+
+      // 检查哪些字段需要更新
+      const fieldsToUpdate: Record<string, any> = {};
+      const changedFields: string[] = [];
+
       for (const field of selectedFields) {
-        const fieldName = field.mapping_field;
-        const fieldId = fieldNameToId[fieldName];
+        const fieldId = fieldNameToId[field.name];
+        if (!fieldId || fieldId === queryFieldId) continue; // 跳过查询字段本身
 
-        if (!fieldId) continue;
-
-        const newValue = resultFields[queryValue][field.name];
-        if (newValue === undefined) continue;
-
-        // 获取当前值
-        const currentValue = await activeTable.getCellValue(fieldId, recordId);
-        let currentValueStr = '';
-
-
-        // 处理不同类型的单元格值
-        if (currentValue === null || currentValue === undefined) {
-          currentValueStr = '';
-        } else if (Array.isArray(currentValue)) {
-          // 处理数组类型（如文本、选项等）
-          if (currentValue.length > 0 && typeof currentValue[0] === 'object' && 'text' in currentValue[0]) {
-            currentValueStr = currentValue[0].text;
-          } else {
-            currentValueStr = currentValue.join(', ');
-          }
-        } else if (typeof currentValue === 'object') {
-          // 处理对象类型
-          if ('text' in currentValue) {
-            currentValueStr = (currentValue as any).text;
-          } else {
-            currentValueStr = String(currentValue);
-          }
-        } else {
-          // 处理基本类型
-          currentValueStr = String(currentValue);
-        }
-
-        // 标准化新值为字符串
-        const newValueStr = String(newValue);
-
-        // 对比值是否变化 - 使用 trim() 去除首尾空格，避免空格导致的误判
-        if (currentValueStr.trim() !== newValueStr.trim()) {
-          console.log(`[AutoComplete] 字段 ${fieldName} - 值发生变化，开始更新`);
+        const newValue = apiData[field.name];
+        if (newValue !== undefined && newValue !== null && newValue !== '') {
           try {
-            await activeTable.setCellValue(fieldId, recordId, newValue);
-            recordStatus.changedFields?.push(fieldName);
-            recordStatus.status = 'success';
+            // 获取当前值进行比较
+            const currentValue = await activeTable.getCellValue(fieldId, recordId);
+
+            // 简单的值比较（可以根据需要优化）
+            if (currentValue !== newValue) {
+              fieldsToUpdate[fieldId] = newValue;
+              changedFields.push(field.name);
+            }
           } catch (error) {
-            console.error(`[AutoComplete] 更新字段失败:`, error);
-            recordStatus.status = 'error';
-            recordStatus.errorMessage = '更新失败，可能无编辑权限';
+            console.warn(`[AutoComplete] 无法获取字段 ${field.name} 的当前值:`, error);
+            // 如果无法获取当前值，直接设置新值
+            fieldsToUpdate[fieldId] = newValue;
+            changedFields.push(field.name);
           }
-        } else {
-          console.log(`[AutoComplete] 字段 ${fieldName} - 值未变化，跳过更新`);
         }
       }
-    } catch (error: any) {
-      recordStatus.status = 'error';
-      recordStatus.errorMessage = error.message || '写入失败';
-      console.error(`Failed to update record ${recordId}:`, error);
+
+      if (Object.keys(fieldsToUpdate).length > 0) {
+        batchUpdates.push({
+          recordId,
+          fields: fieldsToUpdate
+        });
+        recordStatuses.push({
+          recordId,
+          status: 'success',
+          changedFields
+        });
+      } else {
+        recordStatuses.push({
+          recordId,
+          status: 'unchanged'
+        });
+      }
     }
 
-    recordStatuses.push(recordStatus);
-    completedCount++;
-    onProgress?.(completedCount, totalRecords);
+    console.log(`[AutoComplete] 准备批量更新 ${batchUpdates.length} 条记录`);
 
-    // 添加小延迟，让用户能看到进度变化
-    await new Promise(resolve => setTimeout(resolve, 50));
+    // 执行批量更新
+    if (batchUpdates.length > 0) {
+      try {
+        // 使用 setRecords 方法批量更新多行记录
+        await activeTable.setRecords(batchUpdates);
+        console.log(`[AutoComplete] 成功批量更新 ${batchUpdates.length} 条记录`);
+
+        // 更新进度
+        onProgress?.(batchUpdates.length, queryValues.length);
+
+        toast({
+          type: 'success',
+          content: `成功更新 ${batchUpdates.length} 条记录`
+        });
+      } catch (error) {
+        console.error('[AutoComplete] 批量更新失败:', error);
+
+        // 如果批量更新失败，标记所有记录为错误状态
+        for (const status of recordStatuses) {
+          if (status.status === 'success') {
+            status.status = 'error';
+            status.errorMessage = error instanceof Error ? error.message : '批量更新失败';
+          }
+        }
+
+        toast({
+          type: 'error',
+          content: `批量更新失败: ${error instanceof Error ? error.message : '未知错误'}`
+        });
+      }
+    }
+
+    // 统计结果
+    const successCount = recordStatuses.filter(s => s.status === 'success').length;
+    const errorCount = recordStatuses.filter(s => s.status === 'error').length;
+    const unchangedCount = recordStatuses.filter(s => s.status === 'unchanged').length;
+
+    console.log(`[AutoComplete] 完成统计: 成功 ${successCount}, 错误 ${errorCount}, 未变更 ${unchangedCount}`);
+    // 标记记录颜色
+    await markRecordColors(activeTable, recordStatuses);
+    // 确定整体状态
+    let overallStatus: 'success' | 'partial' | 'failed' | 'no_permission';
+    if (errorCount === 0) {
+      overallStatus = successCount > 0 ? 'success' : 'no_permission';
+    } else if (successCount > 0) {
+      overallStatus = 'partial';
+    } else {
+      overallStatus = 'failed';
+    }
+
+    onComplete?.({
+      status: overallStatus,
+      successCount,
+      errorCount,
+      unchangedCount
+    });
+
+  } catch (error) {
+    console.error('[AutoComplete] 自动补全过程中发生错误:', error);
+    toast({
+      type: 'error',
+      content: `自动补全失败: ${error instanceof Error ? error.message : '未知错误'}`
+    });
+
+    onComplete?.({
+      status: 'failed',
+      successCount: 0,
+      errorCount: 1,
+      unchangedCount: 0
+    });
   }
-
-  // 统计结果
-  const successCount = recordStatuses.filter(r => r.status === 'success').length;
-  const errorCount = recordStatuses.filter(r => r.status === 'error').length;
-  const unchangedCount = recordStatuses.filter(r => r.status === 'unchanged').length;
-
-  // 标记记录颜色
-  await markRecordColors(activeTable, recordStatuses);
-
-  // 确定最终状态
-  let finalStatus: 'success' | 'partial' | 'failed' | 'no_permission';
-  if (errorCount === 0) {
-    finalStatus = 'success';
-  } else if (successCount > 0) {
-    finalStatus = 'partial';
-  } else {
-    finalStatus = 'failed';
-  }
-
-  // 调用完成回调
-  onComplete?.({
-    status: finalStatus,
-    successCount,
-    errorCount,
-    unchangedCount
-  });
-
-  // 显示结果
-  let description = `成功更新: ${successCount}条`;
-  if (unchangedCount > 0) description += `, 无变化: ${unchangedCount}条`;
-  if (errorCount > 0) description += `, 失败: ${errorCount}条`;
-
-  toast?.({
-    title: "补全完成",
-    description,
-    variant: errorCount > 0 ? "destructive" : "default"
-  });
 }
 
 // 标记记录颜色的辅助函数
