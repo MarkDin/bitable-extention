@@ -1,4 +1,4 @@
-import { Field, mockGetDataByIds, MockGetDataByIdsResult } from "@/lib/dataSync";
+import { Field, getDataByIds, MockGetDataByIdsResult } from "@/lib/dataSync";
 import type { ITable } from "@lark-base-open/js-sdk";
 import { bitable, FieldType } from "@lark-base-open/js-sdk";
 
@@ -91,8 +91,9 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
     for (const recordId of recordIdList) {
       try {
         const queryValue = await activeTable.getCellValue(queryFieldId, recordId);
-        if (queryValue && queryValue.toString().trim()) {
-          const trimmedValue = queryValue.toString().trim();
+        if (queryValue && queryValue.length > 0) {
+          console.log(`[AutoComplete] 获取到记录 ${recordId} 的查询字段值:`, queryValue);
+          const trimmedValue = queryValue[0].text.trim();
           queryValues.push(trimmedValue);
           recordQueryMap.set(recordId, trimmedValue);
         }
@@ -119,8 +120,8 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
     // 去重并打印queryValues
     // const uniqueQueryValues = [...new Set(queryValues)];
     // console.log('去重后的queryValues:', uniqueQueryValues);
-    const apiResult: MockGetDataByIdsResult = await mockGetDataByIds(queryValues);
-    console.log(`[AutoComplete] API返回 ${Object.keys(apiResult.data.result_map).length} 条数据`);
+    const apiResult: MockGetDataByIdsResult = await getDataByIds(queryValues);
+    console.log(`[AutoComplete] API返回 ${Object.keys(apiResult.data.result_map).length} 条数据`, apiResult.error_msg);
 
     // 准备批量更新的数据
     const batchUpdates: BatchRecordUpdate[] = [];

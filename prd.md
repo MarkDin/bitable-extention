@@ -25,3 +25,33 @@
 - 如果全部成功，文案为“数据补全成功，数据是否更新见「补全状态」列”，颜色为绿色
 - 如果有失败的，文案为“数据补全完成，失败数据详见「补全状态」列”，颜色为红色
 
+## 5. 去掉mock接口
+{
+  "项目号": "projectNo",
+  "NC-SMOM-TMS-CRM订单号": "orderNo",
+  "NC客户简称": "custShortName",
+  "NC索引": "materialIndex",
+  "NC收款协议": "incomeName",
+  "NC销售业务员": "salesperson",
+  "NC发货工厂": "deliveryFactory",
+  "NC现存量": "quantityOnHand",
+  "NC客户要求日期": "custRequestDate",
+  "NC签署PI交期": "deliveryDate",
+  "NC箱盒是否下单": "boxOrNot",
+  "SMOM计划开始时间（上线时间）": "plannedStartTime",
+  "SMOM计划完工时间": "planEndTime",
+  "是否需要出货": "needShipment",
+  "TMS订舱状态": "bookingStatus",
+  "TMS预计离港时间": "etd",
+  "TMS预计到港时间": "eta",
+  "TMS装柜时间": "loadDate",
+  "NC-CRM客户编码": "customerCode",
+  "CRM客户全称": "custName",
+  "CRM所属区域公海": "publicSea",
+  "CRM国家": "country",
+  "CRM收款协议": "collectionAgreement",
+  "CRM账期（天）": "paymentPeriod",
+  "CRM公海池状态": "publicSeaPoolStatus",
+  "CRM预计回收时间": "estimatedRecoveryTime",
+  "MRP是否定稿": "isDraft"
+}

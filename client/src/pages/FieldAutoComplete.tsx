@@ -30,20 +30,34 @@ const DEFAULT_AVAILABLE_FIELDS: Field[] = [
   { name: 'region', mapping_field: '所在地区', query_type: 'customer' },
 
   // 订单相关字段 (订单ID查询时显示)
-  { name: 'orderId', mapping_field: '订单编号', query_type: 'order' },
-  { name: 'orderStatus', mapping_field: '订单状态', query_type: 'order' },
-  { name: 'orderAmount', mapping_field: '订单金额', query_type: 'order' },
-  { name: 'orderDate', mapping_field: '下单时间', query_type: 'order' },
+  { name: 'projectNo', mapping_field: '项目号', query_type: 'order' },
+  { name: 'orderNo', mapping_field: 'NC-SMOM-TMS-CRM订单号', query_type: 'order' },
+  { name: 'custShortName', mapping_field: 'NC客户简称', query_type: 'order' },
+  { name: 'materialIndex', mapping_field: 'NC索引', query_type: 'order' },
+  { name: 'incomeName', mapping_field: 'NC收款协议', query_type: 'order' },
+  { name: 'salesperson', mapping_field: 'NC销售业务员', query_type: 'order' },
+  { name: 'deliveryFactory', mapping_field: 'NC发货工厂', query_type: 'order' },
+  { name: 'quantityOnHand', mapping_field: 'NC现存量', query_type: 'order' },
+  { name: 'custRequestDate', mapping_field: 'NC客户要求日期', query_type: 'order' },
+  { name: 'deliveryDate', mapping_field: 'NC签署PI交期', query_type: 'order' },
+  { name: 'boxOrNot', mapping_field: 'NC箱盒是否下单', query_type: 'order' },
+  { name: 'plannedStartTime', mapping_field: 'SMOM计划开始时间（上线时间）', query_type: 'order' },
+  { name: 'planEndTime', mapping_field: 'SMOM计划完工时间', query_type: 'order' },
+  { name: 'needShipment', mapping_field: '是否需要出货', query_type: 'order' },
+  { name: 'bookingStatus', mapping_field: 'TMS订舱状态', query_type: 'order' },
+  { name: 'etd', mapping_field: 'TMS预计离港时间', query_type: 'order' },
+  { name: 'eta', mapping_field: 'TMS预计到港时间', query_type: 'order' },
+  { name: 'loadDate', mapping_field: 'TMS装柜时间', query_type: 'order' },
+  { name: 'customerCode', mapping_field: 'NC-CRM客户编码', query_type: 'order' },
+  { name: 'custName', mapping_field: 'CRM客户全称', query_type: 'order' },
+  { name: 'publicSea', mapping_field: 'CRM所属区域公海', query_type: 'order' },
+  { name: 'country', mapping_field: 'CRM国家', query_type: 'order' },
+  { name: 'collectionAgreement', mapping_field: 'CRM收款协议', query_type: 'order' },
+  { name: 'paymentPeriod', mapping_field: 'CRM账期（天）', query_type: 'order' },
+  { name: 'publicSeaPoolStatus', mapping_field: 'CRM公海池状态', query_type: 'order' },
+  { name: 'estimatedRecoveryTime', mapping_field: 'CRM预计回收时间', query_type: 'order' },
+  { name: 'isDraft', mapping_field: 'MRP是否定稿', query_type: 'order' },
 
-  // 通用字段 (两种查询都显示)
-  { name: 'contactPerson', mapping_field: '联系人', query_type: 'both' },
-  { name: 'contactPhone', mapping_field: '联系电话', query_type: 'both' },
-  { name: 'contactEmail', mapping_field: '联系邮箱', query_type: 'both' },
-  { name: 'salesPerson', mapping_field: '销售负责人', query_type: 'both' },
-  { name: 'customerLevel', mapping_field: '客户等级', query_type: 'both' },
-  { name: 'lastContactDate', mapping_field: '最后联系时间', query_type: 'both' },
-  { name: 'nextFollowUpDate', mapping_field: '下次跟进时间', query_type: 'both' },
-  { name: 'remarks', mapping_field: '备注', query_type: 'both' }
 ];
 
 // 查询类型选项
@@ -389,8 +403,8 @@ const FieldAutoComplete = () => {
 
         {/* Query Type Selection Section */}
         <div className="mb-6">
-          <div className="mb-1 text-sm font-medium flex items-center">
-            选择补全依据并在数据表第一列填充对应数据
+          <div className="mb-1 flex items-center">
+            <span className="text-base text-foreground font-medium">选择补全依据并在数据表第一列填充对应数据</span>
           </div>
           <Select value={queryType} onValueChange={(value) => setQueryType(value as QueryType)}>
             <SelectTrigger className="w-full text-sm bg-white">

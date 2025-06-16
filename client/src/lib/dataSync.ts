@@ -1,4 +1,5 @@
 import { bitable } from "@lark-base-open/js-sdk";
+import axios from "axios";
 
 // FIXME: 这里的client_id、client_secret、username、password等敏感信息建议通过环境变量或安全方式管理
 const BASE_URL = "https://crm-data-service-dk1543100966.replit.app/customer_info?id=";
@@ -108,37 +109,41 @@ export interface MockGetDataByIdsResult {
 }
 
 /**
- * mock 获取数据接口，模拟 api.md 中定义的接口
+ * 通过真实接口获取数据，替换mock
  * @param id_list 需要获取的 id 列表
- * @returns 模拟的接口返回数据
+ * @returns 接口返回数据
  */
-export async function mockGetDataByIds(id_list: string[]): Promise<MockGetDataByIdsResult> {
-  // 生成 mock 数据
-  const result_map: Record<string, Record<string, string>> = {};
-  id_list.forEach((id, idx) => {
-    result_map[id] = {
-      accountName: `value1_${id}`,
-      accountId: `value2_${id}`,
-      accountType: `value3_${id}`,
-      // industry: `value4_${id}`,
-      // region: `value5_${id}`,
-      // contactPerson: `value6_${id}`,
-      // contactPhone: `value7_${id}`,
-      // contactEmail: `value8_${id}`,
-      // salesPerson: `value9_${id}`,
-      // customerLevel: `value10_${id}`,
-      // lastContactDate: `value11_${id}`,
-      // nextFollowUpDate: `value12_${id}`,
-      // remarks: `value13_${id}`,
+export async function getDataByIds(id_list: string[]): Promise<MockGetDataByIdsResult> {
+  console.log('getDataByIds', id_list);
+  // 拼接ids参数
+  const url = 'https://crm-data-service-dk1543100966.replit.app/get_order?ids=' + id_list[0];
+  try {
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    console.log('getDataByIds res', res);
+    if (!res.ok) {
+      console.error('接口请求失败', res);
+      throw new Error(`接口请求失败: ${res.status} ${res.statusText}`);
+    }
+    const json = await res.json();
+    // 兼容接口返回格式
+    if (json.success || json.data) {
+      return json;
+    } else {
+      console.error(json);
+      throw new Error(json.error_msg || '接口返回失败');
+    }
+  } catch (error: any) {
+    return {
+      success: false,
+      data: { result_map: {} },
+      error_msg: error.message || '接口请求异常',
     };
-  });
-  return {
-    success: true,
-    data: {
-      result_map,
-    },
-    error_msg: '',
-  };
+  }
 }
 
 export async function getConfig<T = Config>(): Promise<T | null> {
