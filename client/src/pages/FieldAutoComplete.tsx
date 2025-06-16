@@ -141,9 +141,9 @@ const FieldAutoComplete = () => {
       } catch (error) {
         console.error('[FieldAutoComplete] 初始化表格失败:', error);
         toast({
+          variant: "destructive",
           title: "错误",
           description: "初始化表格失败",
-          variant: "destructive",
         });
       }
     };
@@ -231,15 +231,16 @@ const FieldAutoComplete = () => {
     onSuccess: () => {
       setSearchPerformed(true);
       toast({
+        variant: "default",
         title: "搜索完成",
         description: "成功获取数据",
       });
     },
     onError: (error) => {
       toast({
+        variant: "destructive",
         title: "搜索失败",
         description: error.message,
-        variant: "destructive",
       });
     }
   });
@@ -286,12 +287,18 @@ const FieldAutoComplete = () => {
       console.log('[FieldAutoComplete] 开始补全，查询类型:', queryType, '第一列字段ID:', firstColumnFieldId);
 
       if (!firstColumnFieldId) {
-        toast({ title: "无法获取第一列字段", variant: "destructive" });
+        toast({
+          variant: "destructive",
+          title: "无法获取第一列字段",
+        });
         return;
       }
 
       if (!selectedFields.length) {
-        toast({ title: "请选择要补全的字段", variant: "destructive" });
+        toast({
+          variant: "destructive",
+          title: "请选择要补全的字段",
+        });
         return;
       }
 
@@ -314,7 +321,11 @@ const FieldAutoComplete = () => {
       });
     } catch (e: any) {
       console.error('[FieldAutoComplete] 补全失败:', e);
-      toast({ title: "补全失败", description: e.message, variant: "destructive" });
+      toast({
+        variant: "destructive",
+        title: "补全失败",
+        description: e.message,
+      });
       // 如果出现异常，回到表单页面
       setPageState('form');
     }

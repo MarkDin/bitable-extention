@@ -81,9 +81,9 @@ export function usePermission(tableId?: string, options: UsePermissionOptions = 
 
             if (showToastOnError) {
                 toast({
+                    variant: 'destructive',
                     title: '权限服务初始化失败',
-                    description: errorMessage,
-                    variant: 'destructive'
+                    description: errorMessage
                 });
             }
 
@@ -104,9 +104,9 @@ export function usePermission(tableId?: string, options: UsePermissionOptions = 
             console.error('检查记录权限失败:', error);
             if (showToastOnError && PermissionUtils.isPermissionError(error)) {
                 toast({
+                    variant: 'destructive',
                     title: '权限检查失败',
-                    description: PermissionUtils.getPermissionErrorMessage(error),
-                    variant: 'destructive'
+                    description: PermissionUtils.getPermissionErrorMessage(error)
                 });
             }
             return null;
@@ -126,9 +126,9 @@ export function usePermission(tableId?: string, options: UsePermissionOptions = 
             console.error('检查字段权限失败:', error);
             if (showToastOnError && PermissionUtils.isPermissionError(error)) {
                 toast({
+                    variant: 'destructive',
                     title: '权限检查失败',
-                    description: PermissionUtils.getPermissionErrorMessage(error),
-                    variant: 'destructive'
+                    description: PermissionUtils.getPermissionErrorMessage(error)
                 });
             }
             return null;
@@ -148,9 +148,9 @@ export function usePermission(tableId?: string, options: UsePermissionOptions = 
             console.error('获取可访问记录失败:', error);
             if (showToastOnError) {
                 toast({
+                    variant: 'destructive',
                     title: '获取记录失败',
-                    description: error.message || '获取可访问记录失败',
-                    variant: 'destructive'
+                    description: error.message || '获取可访问记录失败'
                 });
             }
             return null;
@@ -170,9 +170,9 @@ export function usePermission(tableId?: string, options: UsePermissionOptions = 
             console.error('获取可访问字段失败:', error);
             if (showToastOnError) {
                 toast({
+                    variant: 'destructive',
                     title: '获取字段失败',
-                    description: error.message || '获取可访问字段失败',
-                    variant: 'destructive'
+                    description: error.message || '获取可访问字段失败'
                 });
             }
             return null;
@@ -194,15 +194,15 @@ export function usePermission(tableId?: string, options: UsePermissionOptions = 
 
             if (result.hasPermission) {
                 toast({
+                    variant: 'default',
                     title: '更新成功',
-                    description: `已更新记录 ${recordId}`,
-                    variant: 'default'
+                    description: `已更新记录 ${recordId}`
                 });
             } else if (showToastOnError) {
                 toast({
+                    variant: 'destructive',
                     title: '更新失败',
-                    description: result.errorMessage || '无权限更新记录',
-                    variant: 'destructive'
+                    description: result.errorMessage || '无权限更新记录'
                 });
             }
 
@@ -211,9 +211,9 @@ export function usePermission(tableId?: string, options: UsePermissionOptions = 
             console.error('更新记录失败:', error);
             if (showToastOnError) {
                 toast({
+                    variant: 'destructive',
                     title: '更新失败',
-                    description: error.message || '更新记录失败',
-                    variant: 'destructive'
+                    description: error.message || '更新记录失败'
                 });
             }
             return null;
@@ -273,9 +273,9 @@ export function usePermission(tableId?: string, options: UsePermissionOptions = 
 
             if (showToastOnError) {
                 toast({
+                    variant: 'destructive',
                     title: errorTitle || '操作失败',
-                    description: errorMessage,
-                    variant: 'destructive'
+                    description: errorMessage
                 });
             }
 

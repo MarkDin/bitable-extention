@@ -131,12 +131,13 @@ const PermissionManager: React.FC = () => {
             toast({
                 title: '刷新成功',
                 description: '权限信息已更新',
+                variant: 'default',
             });
         } catch (error) {
             toast({
                 title: '刷新失败',
                 description: '无法更新权限信息',
-                variant: 'destructive'
+                variant: 'destructive',
             });
         }
     };
@@ -152,6 +153,7 @@ const PermissionManager: React.FC = () => {
                 toast({
                     title: '选择信息',
                     description: `表格: ${data.hasTableAccess ? '✓' : '✗'}, 视图: ${data.hasViewAccess ? '✓' : '✗'}, 记录: ${data.hasRecordAccess ? '✓' : '✗'}, 字段: ${data.hasFieldAccess ? '✓' : '✗'}`,
+                    variant: 'default',
                 });
 
                 // 设置选中的记录和字段ID用于权限检查

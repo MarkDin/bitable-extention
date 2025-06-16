@@ -62,6 +62,7 @@ const Login: React.FC = () => {
                     setLoginStatus('success');
 
                     toast({
+                        variant: 'default',
                         title: "登录成功",
                         description: "欢迎使用飞书多维表格数据助手",
                     });
@@ -78,9 +79,9 @@ const Login: React.FC = () => {
                     setLoginStatus('error');
 
                     toast({
+                        variant: 'destructive',
                         title: "登录失败",
                         description: errorMsg,
-                        variant: "destructive",
                     });
                 }
             };

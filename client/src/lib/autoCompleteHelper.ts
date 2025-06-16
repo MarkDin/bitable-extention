@@ -45,7 +45,7 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
     console.log(`[AutoComplete] 获取到 ${recordIdList.length} 条记录`);
 
     if (recordIdList.length === 0) {
-      toast({ type: 'warning', content: '当前数据表中没有记录' });
+      toast({ title: '当前数据表中没有记录', variant: 'warning' });
       onComplete?.({
         status: 'success',
         successCount: 0,
@@ -68,7 +68,7 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
         await activeTable.addField({ name: field.mapping_field, type: FieldType.Text });
       } catch (error) {
         console.warn(`[AutoComplete] 新建字段 ${field.mapping_field} 失败:`, error);
-        toast({ type: 'error', content: `新建字段 ${field.mapping_field} 失败，可能无表格编辑权限` });
+        toast({ title: `新建字段 ${field.mapping_field} 失败`, description: '可能无表格编辑权限', variant: 'destructive' });
         onComplete?.({
           status: 'no_permission',
           successCount: 0,
@@ -104,7 +104,7 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
     console.log(`[AutoComplete] 需要查询 ${queryValues.length} 个值`);
 
     if (queryValues.length === 0) {
-      toast({ type: 'warning', content: '没有找到可用于查询的数据' });
+      toast({ title: '没有找到可用于查询的数据', variant: 'warning' });
       onComplete?.({
         status: 'success',
         successCount: 0,
@@ -223,10 +223,7 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
         // 更新进度
         onProgress?.(batchUpdates.length, queryValues.length);
 
-        toast({
-          type: 'success',
-          content: `成功更新 ${batchUpdates.length} 条记录`
-        });
+        toast({ title: `成功更新 ${batchUpdates.length} 条记录`, type: 'success' });
       } catch (error) {
         console.error('[AutoComplete] 批量更新失败:', error);
 
@@ -238,10 +235,7 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
           }
         }
 
-        toast({
-          type: 'error',
-          content: `批量更新失败: ${error instanceof Error ? error.message : '未知错误'}`
-        });
+        toast({ title: '批量更新失败', description: error instanceof Error ? error.message : '未知错误', variant: 'destructive' });
       }
     }
 
@@ -276,18 +270,12 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
 
     // 在流程最后，若有未获取到的字段，统一展示报错
     if (missingFieldValues.length > 0) {
-      toast({
-        type: 'error',
-        content: `以下字段未获取到补全数据：${missingFieldValues.join('、')}`
-      });
+      toast({ title: '以下字段未获取到补全数据', description: missingFieldValues.join('、'), variant: 'destructive' });
     }
 
   } catch (error) {
     console.error('[AutoComplete] 自动补全过程中发生错误:', error);
-    toast({
-      type: 'error',
-      content: `自动补全失败: ${error instanceof Error ? error.message : '未知错误'}`
-    });
+    toast({ title: '自动补全失败', description: error instanceof Error ? error.message : '未知错误', variant: 'destructive' });
 
     onComplete?.({
       status: 'failed',
@@ -346,7 +334,6 @@ async function markRecordColors(table: ITable, statuses: RecordStatus[]) {
         return;
       }
     }
-
     // 批量组装所有要写入的内容
     if (statusFieldId) {
       const updates = statuses.map(status => {
