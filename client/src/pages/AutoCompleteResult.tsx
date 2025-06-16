@@ -3,7 +3,7 @@ import { AlertCircle, CheckCircle, XCircle } from 'lucide-react';
 import React from 'react';
 
 interface AutoCompleteResultProps {
-    status: 'success' | 'partial' | 'failed' | 'no_permission';
+    status: 'success' | 'partial' | 'failed' | 'no_permission' | 'noChange';
     successCount: number;
     errorCount: number;
     unchangedCount: number;
@@ -40,6 +40,13 @@ const AutoCompleteResult: React.FC<AutoCompleteResultProps> = ({
                     color: 'text-orange-500',
                     bgColor: 'bg-orange-50'
                 };
+            case 'noChange':
+                return {
+                    icon: <CheckCircle className="w-16 h-16 text-blue-500" />,
+                    message: '当前数据已经是最新',
+                    color: 'text-blue-500',
+                    bgColor: 'bg-blue-50'
+                };
             case 'failed':
             default:
                 return {
@@ -56,8 +63,9 @@ const AutoCompleteResult: React.FC<AutoCompleteResultProps> = ({
     return (
         <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-gray-50">
             <div className="w-full max-w-md">
+
                 {/* 顶部提示 */}
-                <div className="mb-6 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="mb-6 p-3 bg-blue-50 border border-blue-200 rounded-lg w-full">
                     <div className="flex items-center text-blue-700">
                         <div className="w-4 h-4 bg-blue-500 rounded-full mr-2 flex-shrink-0"></div>
                         <span className="text-sm">如需帮助，请点击加入反馈群</span>
@@ -87,7 +95,7 @@ const AutoCompleteResult: React.FC<AutoCompleteResultProps> = ({
                                 <div>无变化: {unchangedCount} 条</div>
                             )}
                             {errorCount > 0 && (
-                                <div>失败: {errorCount} 条</div>
+                                <div className="text-red-500 font-bold">失败: {errorCount} 条</div>
                             )}
                         </div>
                     )}

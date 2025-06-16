@@ -120,6 +120,16 @@ export async function mockGetDataByIds(id_list: string[]): Promise<MockGetDataBy
       accountName: `value1_${id}`,
       accountId: `value2_${id}`,
       accountType: `value3_${id}`,
+      // industry: `value4_${id}`,
+      // region: `value5_${id}`,
+      // contactPerson: `value6_${id}`,
+      // contactPhone: `value7_${id}`,
+      // contactEmail: `value8_${id}`,
+      // salesPerson: `value9_${id}`,
+      // customerLevel: `value10_${id}`,
+      // lastContactDate: `value11_${id}`,
+      // nextFollowUpDate: `value12_${id}`,
+      // remarks: `value13_${id}`,
     };
   });
   return {

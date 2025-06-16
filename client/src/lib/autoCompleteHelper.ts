@@ -8,7 +8,7 @@ interface AutoCompleteParams {
   queryFieldId: string;
   onProgress?: (completed: number, total: number) => void;
   onComplete?: (result: {
-    status: 'success' | 'partial' | 'failed' | 'no_permission';
+    status: 'success' | 'partial' | 'failed' | 'no_permission' | 'noChange';
     successCount: number;
     errorCount: number;
     unchangedCount: number;
@@ -60,18 +60,30 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
     let existingFieldNames = allFields.map(f => f.name);
 
     // 2. 找出需要新建的字段
-    const fieldsToCreate = selectedFields.filter(f => !existingFieldNames.includes(f.name));
-
+    const fieldsToCreate = selectedFields.filter(f => !existingFieldNames.includes(f.mapping_field));
+    console.log(`[AutoComplete] 需要新建 ${fieldsToCreate.length} 个字段`);
     // 3. 新建缺失字段
     for (const field of fieldsToCreate) {
-      // 统一使用文本类型
-      await activeTable.addField({ name: field.name, type: FieldType.Text });
+      try {
+        await activeTable.addField({ name: field.mapping_field, type: FieldType.Text });
+      } catch (error) {
+        console.warn(`[AutoComplete] 新建字段 ${field.mapping_field} 失败:`, error);
+        toast({ type: 'error', content: `新建字段 ${field.mapping_field} 失败，可能无表格编辑权限` });
+        onComplete?.({
+          status: 'no_permission',
+          successCount: 0,
+          errorCount: 0,
+          unchangedCount: 0
+        });
+        return;
+      }
     }
 
     // 4. 新建后重新获取字段列表，建立 name->id 映射
     allFields = await activeTable.getFieldMetaList();
+    // allFields 中的name是多维表格中的表头，一般是中文，mapping_field是字段名，是英文名
     const fieldNameToId = Object.fromEntries(allFields.map(f => [f.name, f.id]));
-
+    console.log(`[AutoComplete] 建立字段名到ID的映射:`, fieldNameToId);
     // 收集所有需要查询的值
     const queryValues: string[] = [];
     const recordQueryMap = new Map<string, string>();
@@ -114,21 +126,27 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
     const batchUpdates: BatchRecordUpdate[] = [];
     const recordStatuses: RecordStatus[] = [];
 
+    // 新增：收集未获取到 newValue 的字段名
+    const missingFieldValues: string[] = [];
+
     for (const recordId of recordIdList) {
       const queryValue = recordQueryMap.get(recordId);
       if (!queryValue) {
         recordStatuses.push({
           recordId,
-          status: 'unchanged'
+          status: 'error',
+          errorMessage: `查询字段值为空`
         });
+        console.log(`[AutoComplete] 跳过记录 ${recordId} 的查询字段值:`, queryValue);
         continue;
       }
 
-      const apiData = apiResult.data.result_map[queryValue];
-      if (!apiData) {
+      const rowMap = apiResult.data.result_map[queryValue];
+      if (!rowMap) {
         recordStatuses.push({
           recordId,
-          status: 'unchanged'
+          status: 'error',
+          errorMessage: `查询字段值为空`
         });
         continue;
       }
@@ -136,28 +154,42 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
       // 检查哪些字段需要更新
       const fieldsToUpdate: Record<string, any> = {};
       const changedFields: string[] = [];
-
+      // selectedFields 中的name是英文名  mapping_field是字段名，是中文名
       for (const field of selectedFields) {
-        const fieldId = fieldNameToId[field.name];
-        if (!fieldId || fieldId === queryFieldId) continue; // 跳过查询字段本身
+        const fieldId = fieldNameToId[field.mapping_field];
+        if (!fieldId || fieldId === queryFieldId) {
+          console.log(`[AutoComplete] 跳过查询字段本身:`, field.mapping_field);
+          continue
+        }; // 跳过查询字段本身
 
-        const newValue = apiData[field.name];
-        if (newValue !== undefined && newValue !== null && newValue !== '') {
-          try {
-            // 获取当前值进行比较
-            const currentValue = await activeTable.getCellValue(fieldId, recordId);
-
-            // 简单的值比较（可以根据需要优化）
-            if (currentValue !== newValue) {
-              fieldsToUpdate[fieldId] = newValue;
-              changedFields.push(field.name);
-            }
-          } catch (error) {
-            console.warn(`[AutoComplete] 无法获取字段 ${field.name} 的当前值:`, error);
-            // 如果无法获取当前值，直接设置新值
+        const newValue = rowMap[field.name];
+        console.log(`[AutoComplete] 获取到 ${field.name} 的值:`, newValue);
+        if (newValue === undefined || newValue === null || newValue === '') {
+          // 新增：收集未获取到的字段名
+          if (!missingFieldValues.includes(field.name)) {
+            missingFieldValues.push(field.name);
+            recordStatuses.push({
+              recordId,
+              status: 'error',
+              errorMessage: `获取到 ${field.name} 的值为空`
+            });
+          }
+          continue;
+        }
+        try {
+          // 获取当前值进行比较
+          const currentValue = await getCurrentValue(activeTable, fieldId, recordId);
+          // 简单的值比较（可以根据需要优化）
+          if (currentValue.trim() !== newValue.trim()) {
             fieldsToUpdate[fieldId] = newValue;
+            console.log(`[AutoComplete] 更新字段 ${field.name} 的值为 ${newValue}, 当前值为 ${currentValue}`);
             changedFields.push(field.name);
           }
+        } catch (error) {
+          console.warn(`[AutoComplete] 无法获取字段 ${field.name} 的当前值:`, error);
+          // 如果无法获取当前值，直接设置新值
+          fieldsToUpdate[fieldId] = newValue;
+          changedFields.push(field.name);
         }
       }
 
@@ -220,13 +252,17 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
 
     console.log(`[AutoComplete] 完成统计: 成功 ${successCount}, 错误 ${errorCount}, 未变更 ${unchangedCount}`);
     // 标记记录颜色
-    await markRecordColors(activeTable, recordStatuses);
+    const deduplicatedStatuses = deduplicateStatuses(recordStatuses);
+    console.log(`[AutoComplete] 标记记录颜色:`, deduplicatedStatuses);
+    await markRecordColors(activeTable, deduplicatedStatuses);
     // 确定整体状态
-    let overallStatus: 'success' | 'partial' | 'failed' | 'no_permission';
-    if (errorCount === 0) {
-      overallStatus = successCount > 0 ? 'success' : 'no_permission';
-    } else if (successCount > 0) {
+    let overallStatus: 'success' | 'partial' | 'failed' | 'noChange';
+    if (errorCount === 0 && successCount > 0) {
+      overallStatus = 'success';
+    } else if (errorCount > 0 && successCount > 0) {
       overallStatus = 'partial';
+    } else if (successCount === 0 && unchangedCount === recordIdList.length) {
+      overallStatus = 'noChange';
     } else {
       overallStatus = 'failed';
     }
@@ -237,6 +273,14 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
       errorCount,
       unchangedCount
     });
+
+    // 在流程最后，若有未获取到的字段，统一展示报错
+    if (missingFieldValues.length > 0) {
+      toast({
+        type: 'error',
+        content: `以下字段未获取到补全数据：${missingFieldValues.join('、')}`
+      });
+    }
 
   } catch (error) {
     console.error('[AutoComplete] 自动补全过程中发生错误:', error);
@@ -252,6 +296,23 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
       unchangedCount: 0
     });
   }
+}
+
+function deduplicateStatuses(statuses: RecordStatus[]): RecordStatus[] {
+  const recordMap = new Map<string, RecordStatus>();
+  for (const status of statuses) {
+    const existing = recordMap.get(status.recordId);
+    if (!existing) {
+      recordMap.set(status.recordId, status);
+    } else if (existing.status === 'error' && status.status === 'error') {
+      // 合并 errorMessage
+      existing.errorMessage = (existing.errorMessage || '') + '；' + (status.errorMessage || '');
+      recordMap.set(status.recordId, existing);
+    } else if (existing.status !== 'error' && status.status === 'error') {
+      recordMap.set(status.recordId, status);
+    }
+  }
+  return Array.from(recordMap.values());
 }
 
 // 标记记录颜色的辅助函数
@@ -277,45 +338,73 @@ async function markRecordColors(table: ITable, statuses: RecordStatus[]) {
       try {
         const newField = await table.addField({
           name: statusFieldName,
-          type: 1 // FieldType.Text
+          type: FieldType.Text
         });
         statusFieldId = newField;
       } catch (error) {
         console.warn('创建状态字段失败:', error);
+        return;
       }
     }
 
-    // 为每条记录设置状态文本
+    // 批量组装所有要写入的内容
     if (statusFieldId) {
-      for (const status of statuses) {
+      const updates = statuses.map(status => {
         let statusText = '';
         let statusEmoji = '';
-
         switch (status.status) {
           case 'success':
-            statusEmoji = '🟡';  // 黄色圆圈表示有变化
+            statusEmoji = '🟡';
             statusText = `${statusEmoji} 已更新 (${status.changedFields?.length || 0}个字段)`;
             break;
           case 'unchanged':
-            statusEmoji = '⚪';  // 白色圆圈表示无变化
+            statusEmoji = '⚪';
             statusText = `${statusEmoji} 无变化`;
             break;
           case 'error':
-            statusEmoji = '🔴';  // 红色圆圈表示错误
+            statusEmoji = '🔴';
             statusText = `${statusEmoji} 失败: ${status.errorMessage || '未知错误'}`;
             break;
         }
-
-        try {
-          await table.setCellValue(statusFieldId, status.recordId, statusText);
-        } catch (error) {
-          console.warn(`设置状态失败 (recordId: ${status.recordId}):`, error);
-        }
-      }
+        return {
+          recordId: status.recordId,
+          fields: {
+            [statusFieldId]: statusText
+          }
+        };
+      });
+      // 批量写入
+      await table.setRecords(updates);
     }
-
-    console.log('记录状态标记完成');
   } catch (error) {
-    console.error('标记记录状态失败:', error);
+    console.warn('批量标记记录状态失败:', error);
   }
-} 
+}
+
+
+async function getCurrentValue(table: ITable, fieldId: string, recordId: string): Promise<string> {
+  const currentValue = await table.getCellValue(fieldId, recordId);
+  let currentValueStr = '';
+  // 处理不同类型的单元格值
+  if (currentValue === null || currentValue === undefined) {
+    currentValueStr = '';
+  } else if (Array.isArray(currentValue)) {
+    // 处理数组类型（如文本、选项等）
+    if (currentValue.length > 0 && typeof currentValue[0] === 'object' && 'text' in currentValue[0]) {
+      currentValueStr = currentValue[0].text;
+    } else {
+      currentValueStr = currentValue.join(', ');
+    }
+  } else if (typeof currentValue === 'object') {
+    // 处理对象类型
+    if ('text' in currentValue) {
+      currentValueStr = (currentValue as any).text;
+    } else {
+      currentValueStr = String(currentValue);
+    }
+  } else {
+    // 处理基本类型
+    currentValueStr = String(currentValue);
+  }
+  return currentValueStr;
+}
