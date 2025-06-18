@@ -240,15 +240,17 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
       }
     }
 
+
+    // 统计去重
+    const deduplicatedStatuses = deduplicateStatuses(recordStatuses);
+    console.log(`[AutoComplete] 标记记录颜色:`, deduplicatedStatuses);
     // 统计结果
-    const successCount = recordStatuses.filter(s => s.status === 'success').length;
-    const errorCount = recordStatuses.filter(s => s.status === 'error').length;
-    const unchangedCount = recordStatuses.filter(s => s.status === 'unchanged').length;
+    const successCount = deduplicatedStatuses.filter(s => s.status === 'success').length;
+    const errorCount = deduplicatedStatuses.filter(s => s.status === 'error').length;
+    const unchangedCount = deduplicatedStatuses.filter(s => s.status === 'unchanged').length;
 
     console.log(`[AutoComplete] 完成统计: 成功 ${successCount}, 错误 ${errorCount}, 未变更 ${unchangedCount}`);
     // 标记记录颜色
-    const deduplicatedStatuses = deduplicateStatuses(recordStatuses);
-    console.log(`[AutoComplete] 标记记录颜色:`, deduplicatedStatuses);
     await markRecordColors(activeTable, deduplicatedStatuses);
     // 确定整体状态
     let overallStatus: 'success' | 'partial' | 'failed' | 'noChange';

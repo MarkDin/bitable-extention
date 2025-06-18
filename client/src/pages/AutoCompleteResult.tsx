@@ -64,14 +64,6 @@ const AutoCompleteResult: React.FC<AutoCompleteResultProps> = ({
         <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-gray-50">
             <div className="w-full max-w-md">
 
-                {/* 顶部提示 */}
-                <div className="mb-6 p-3 bg-blue-50 border border-blue-200 rounded-lg w-full">
-                    <div className="flex items-center text-blue-700">
-                        <div className="w-4 h-4 bg-blue-500 rounded-full mr-2 flex-shrink-0"></div>
-                        <span className="text-sm">如需帮助，请点击加入反馈群</span>
-                    </div>
-                </div>
-
                 {/* 插图区域 */}
                 <div className="flex justify-center mb-8">
                     <div className={`w-48 h-48 ${statusConfig.bgColor} rounded-lg flex items-center justify-center`}>

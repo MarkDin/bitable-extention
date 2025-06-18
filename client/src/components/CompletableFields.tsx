@@ -113,18 +113,11 @@ const CompletableFields: React.FC<CompletableFieldsProps> = ({ fields, selectedF
     return '新增';
   };
 
-  const getFieldStatusColor = (status: FieldStatus) => {
-    if (status.existsInTable) {
-      return 'text-[#165DFF] bg-[#E8F3FF]';
-    }
-    return 'text-[#00B42A] bg-[#E8F7FF]';
-  };
-
   if (loading) {
     return (
       <div className="mb-6">
         <div className="mb-2 flex items-center">
-          <h3 className="font-medium">请选择要补全的字段</h3>
+          <h3 className="text-base font-normal text-[#1D2129]">请选择要补全的字段</h3>
           <span className="ml-2 text-xs text-[#86909C]">加载中...</span>
         </div>
       </div>
@@ -134,21 +127,25 @@ const CompletableFields: React.FC<CompletableFieldsProps> = ({ fields, selectedF
   return (
     <div className="mb-6">
       <div className="mb-2 flex items-center">
-        <h3 className="font-medium">请选择要补全的字段</h3>
+        <h3 className="block text-base font-semibold mb-1">请选择要补全的字段</h3>
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
               <Info className="ml-2 h-4 w-4 text-[#86909C] cursor-help" />
             </TooltipTrigger>
-            <TooltipContent side="right" className="max-w-xs">
-              <div className="text-sm space-y-1">
-                <div className="flex items-center">
-                  <div className="w-2 h-2 rounded-full bg-[#86909C] mr-2"></div>
-                  <span>灰色默认勾选的字段是多维表格中已存在的字段，提交后会自动更新</span>
+            <TooltipContent
+              side="right"
+              className="bg-white border border-[#E5E6EB] shadow-lg rounded-lg p-3 max-w-[280px]"
+              sideOffset={5}
+            >
+              <div className="text-sm space-y-2">
+                <div className="flex items-start">
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#C9CDD4] mt-1.5 mr-2 flex-shrink-0"></div>
+                  <span className="text-[#1D2129] leading-5">灰色默认勾选的字段是多维表格中已存在的字段，提交后会自动更新</span>
                 </div>
-                <div className="flex items-center">
-                  <div className="w-2 h-2 rounded-full bg-[#86909C] mr-2"></div>
-                  <span>新增勾选的字段，会在多维表格最后插入新列</span>
+                <div className="flex items-start">
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#C9CDD4] mt-1.5 mr-2 flex-shrink-0"></div>
+                  <span className="text-[#1D2129] leading-5">新增勾选的字段，会在多维表格最后插入新列</span>
                 </div>
               </div>
             </TooltipContent>
@@ -160,10 +157,7 @@ const CompletableFields: React.FC<CompletableFieldsProps> = ({ fields, selectedF
         {fieldStatuses.map((fieldStatus, index) => (
           <div
             key={index}
-            className={`flex items-center justify-between py-2 px-4 border rounded ${fieldStatus.existsInTable
-              ? 'border-[#165DFF] bg-[#F7F8FA]'
-              : 'border-[#e5e6eb] bg-white'
-              }`}
+            className={`flex items-center py-2 px-4 ${fieldStatus.existsInTable ? 'opacity-60' : ''}`}
           >
             <div className="flex items-center flex-1">
               <Checkbox
@@ -171,18 +165,20 @@ const CompletableFields: React.FC<CompletableFieldsProps> = ({ fields, selectedF
                 checked={isFieldSelected(fieldStatus.field)}
                 onCheckedChange={() => handleToggle(fieldStatus)}
                 disabled={fieldStatus.existsInTable}
+                className={fieldStatus.existsInTable ? 'cursor-not-allowed' : 'cursor-pointer'}
               />
               <label
                 htmlFor={`field-${index}`}
-                className={`text-sm ml-2 font-medium flex-1 ${fieldStatus.existsInTable
-                  ? 'text-[#165DFF] cursor-default'
-                  : 'text-[#1d2129] cursor-pointer'
+                className={`text-base ml-2 font-normal flex-1 text-[#1D2129] ${fieldStatus.existsInTable
+                  ? 'cursor-not-allowed'
+                  : 'cursor-pointer'
                   }`}
               >
                 {fieldStatus.field.mapping_field}
               </label>
             </div>
-            <span className={`text-xs px-2 py-0.5 rounded ${getFieldStatusColor(fieldStatus)}`}>
+            <span className={`text-xs px-2 py-0.5 rounded-sm ${fieldStatus.existsInTable ? 'bg-[#F2F3F5] text-[#86909C]' : 'bg-[#E8FFEA] text-[#00B42A]'
+              }`}>
               {getFieldStatusText(fieldStatus)}
             </span>
           </div>

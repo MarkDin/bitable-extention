@@ -24,10 +24,10 @@ interface CompletionResult {
 // 默认字段配置 - 按查询类型分类
 const DEFAULT_AVAILABLE_FIELDS: Field[] = [
   // 客户相关字段 (客户简称查询时显示)
-  { name: 'accountName', mapping_field: '客户名称', query_type: 'customer' },
-  { name: 'accountType', mapping_field: '客户类型', query_type: 'customer' },
-  { name: 'industry', mapping_field: '所属行业', query_type: 'customer' },
-  { name: 'region', mapping_field: '所在地区', query_type: 'customer' },
+  // { name: 'accountName', mapping_field: '客户名称', query_type: 'customer' },
+  // { name: 'accountType', mapping_field: '客户类型', query_type: 'customer' },
+  // { name: 'industry', mapping_field: '所属行业', query_type: 'customer' },
+  // { name: 'region', mapping_field: '所在地区', query_type: 'customer' },
 
   // 订单相关字段 (订单ID查询时显示)
   { name: 'projectNo', mapping_field: '项目号', query_type: 'order' },
@@ -420,20 +420,6 @@ const FieldAutoComplete = () => {
           </Select>
         </div>
 
-        {/* Data Source Section */}
-        {/* <div className="mb-6">
-          <div className="mb-1 text-sm font-medium">数据源</div>
-          <Select value={dataSource.toString()} onValueChange={(value) => setDataSource(parseInt(value))}>
-            <SelectTrigger className="w-full text-sm bg-white">
-              <SelectValue placeholder="选择数据源" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem key={1} value="1">
-                mock数据
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div> */}
 
         <CompletableFields
           fields={filteredFields}

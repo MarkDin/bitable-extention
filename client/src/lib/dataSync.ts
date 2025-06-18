@@ -1,5 +1,4 @@
 import { bitable } from "@lark-base-open/js-sdk";
-import axios from "axios";
 
 // FIXME: 这里的client_id、client_secret、username、password等敏感信息建议通过环境变量或安全方式管理
 const BASE_URL = "https://crm-data-service-dk1543100966.replit.app/customer_info?id=";
@@ -116,14 +115,14 @@ export interface MockGetDataByIdsResult {
 export async function getDataByIds(id_list: string[]): Promise<MockGetDataByIdsResult> {
   console.log('getDataByIds', id_list);
   // 拼接ids参数
-  const url = 'https://crm-data-service-dk1543100966.replit.app/get_order?ids=' + id_list[0];
+  const url = 'https://crm-data-service-dk1543100966.replit.app/get_order?ids=' + id_list.join(',');
   try {
-    const res = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    const res = await fetch(
+      url,
+      {
+        method: 'POST',
+      }
+    );
     console.log('getDataByIds res', res);
     if (!res.ok) {
       console.error('接口请求失败', res);
