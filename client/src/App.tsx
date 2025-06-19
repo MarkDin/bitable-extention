@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useFeishuBase } from "@/hooks/use-feishu-base";
 import ConfigManager from "@/pages/ConfigManager";
 import FieldAutoComplete from "@/pages/FieldAutoComplete";
+import FieldCompleteV2 from "@/pages/FieldCompleteV2";
 import NotFound from "@/pages/not-found";
 import PermissionManager from "@/pages/PermissionManager";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -17,12 +18,17 @@ function Router() {
     <Switch>
       <Route path="/">
         <PluginLayout>
-          <FieldAutoComplete />
+          <FieldCompleteV2 />
         </PluginLayout>
       </Route>
       <Route path="/auto-complete">
         <PluginLayout>
           <FieldAutoComplete />
+        </PluginLayout>
+      </Route>
+      <Route path="/field-complete-v2">
+        <PluginLayout>
+          <FieldCompleteV2 />
         </PluginLayout>
       </Route>
       <Route path="/config-manager">

@@ -8,6 +8,7 @@ import { autoCompleteFields } from "@/lib/autoCompleteHelper";
 import { Field, QueryType } from "@/lib/dataSync";
 import { bitable } from "@lark-base-open/js-sdk";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { BookText } from "lucide-react";
 import { useEffect, useState } from "react";
 import AutoCompleteProgress from "./AutoCompleteProgress";
 import AutoCompleteResult from "./AutoCompleteResult";
@@ -392,13 +393,16 @@ const FieldAutoComplete = () => {
         {/* Table Name Section */}
         <div className="mb-4">
           <label className="block text-base font-semibold mb-1">补全的数据表</label>
-          <input
-            type="text"
-            className="w-full px-3 py-2 border rounded bg-gray-100 text-base"
-            value={tableName || '未获取到表格名称'}
-            disabled
-            readOnly
-          />
+          <div className="relative">
+            <BookText className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+            <input
+              type="text"
+              className="w-full pl-10 pr-3 py-2 border rounded bg-gray-100 text-base"
+              value={tableName || '未获取到表格名称'}
+              disabled
+              readOnly
+            />
+          </div>
         </div>
 
         {/* Query Type Selection Section */}

@@ -6,3 +6,4 @@ alwaysApply: false
 1. 如果我的需求描述的不完整或者缺少信息，请先询问我，不要着急写代码
 2.开发文档检索 MCP（后续简称“文档检索 MCP”）使用 MCP（Model Context Protocol） 协议连接飞书开放平台，用于检索飞书开放平台开发文档。与 AI agent 集成后，可根据你的诉求检索相匹配的开发文档内容，并结合项目上下文自动生成代码示例
 3. 参考./attached_assets中的文档
+4. 使用https://arco.design/react/components 来作为组件库
