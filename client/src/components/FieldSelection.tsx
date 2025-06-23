@@ -185,26 +185,20 @@ const FieldItem: React.FC<{
 }> = ({ field, onCheckedChange }) => {
     return (
         <div className="flex items-center justify-between pr-2">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
                 <CustomCheckbox
-                    id={field.id}
+                    id={`field-${field.id}`}
                     checked={field.isChecked}
-                    onCheckedChange={onCheckedChange}
+                    onCheckedChange={(checked) => onCheckedChange(checked)}
                     disabled={field.isDisabled}
                 />
-                <label
-                    htmlFor={field.id}
-                    className={cn(
-                        "text-sm leading-[22px] select-none",
-                        field.isDisabled ? "text-[#c9cdd4] cursor-not-allowed" : "text-[#1d2129] cursor-pointer"
-                    )}
-                >
+                <FieldTag type={field.type} />
+                <label htmlFor={`field-${field.id}`} className="text-sm text-[#1f2329] cursor-pointer">
                     {field.name}
                 </label>
-                <FieldTag type={field.type} />
             </div>
-            {field.helperText && (
-                <span className="text-xs text-[#86909c] flex-shrink-0">{field.helperText}</span>
+            {field.isDisabled && (
+                <span className="text-xs text-[#86909c]">数据表已有字段默认选中</span>
             )}
         </div>
     );
