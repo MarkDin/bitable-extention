@@ -1,4 +1,5 @@
-import { bitable } from "@lark-base-open/js-sdk";
+import { Field } from "@/types/common";
+import { bitable, FieldType } from "@lark-base-open/js-sdk";
 
 // FIXME: 这里的client_id、client_secret、username、password等敏感信息建议通过环境变量或安全方式管理
 const BASE_URL = "https://crm-data-service-dk1543100966.replit.app/customer_info?id=";
@@ -83,11 +84,7 @@ export async function getMappingConfig(): Promise<Field[] | null> {
 /**
  * 获取多维表格中存储的配置（json对象）
  */
-export interface Field {
-  name: string;
-  mapping_field: string;
-  query_type?: 'customer' | 'order' | 'both'; // 字段适用的查询类型（已废弃，保留用于兼容性）
-}
+
 
 export interface Config {
   field_list: Field[];
@@ -102,7 +99,7 @@ export enum QueryType {
 export interface MockGetDataByIdsResult {
   success: boolean;
   data: {
-    result_map: Record<string, Record<string, string>>;
+    result_map: Record<string, Record<string, { value: string, source: string, systemName: string }>>;
   };
   error_msg?: string;
 }
@@ -114,13 +111,19 @@ export interface MockGetDataByIdsResult {
  */
 export async function getDataByIds(id_list: string[]): Promise<MockGetDataByIdsResult> {
   console.log('getDataByIds', id_list);
-  // 拼接ids参数
-  const url = 'https://crm-data-service-dk1543100966.replit.app/get_order?ids=' + id_list.join(',');
+
+  // 构建查询参数，每个ID作为一个单独的 id_list 参数
+  const queryParams = id_list.map(id => `id_list=${encodeURIComponent(id)}`).join('&');
+  const url = `https://219.146.148.108:8011/prod-api/external/order/orderDataCompletion?${queryParams}`;
+
   try {
     const res = await fetch(
       url,
       {
-        method: 'POST',
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       }
     );
     console.log('getDataByIds res', res);
@@ -147,4 +150,22 @@ export async function getDataByIds(id_list: string[]): Promise<MockGetDataByIdsR
 
 export async function getConfig<T = Config>(): Promise<T | null> {
   return await bitable.bridge.getData<T>(CONFIG_KEY);
+}
+
+
+export function getFieldTypeMapping(fieldName: string): FieldType {
+  if (fieldName.includes('现存量')) {
+    return FieldType.Number;
+  }
+  if (fieldName.includes('已收款金额')) {
+    return FieldType.Number;
+  }
+  if (fieldName.includes('计划开始时间')) {
+    return FieldType.DateTime;
+  }
+  if (fieldName.includes('计划结束时间')) {
+    return FieldType.DateTime;
+  }
+
+  return FieldType.Text;
 }

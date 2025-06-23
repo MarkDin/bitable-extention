@@ -4,8 +4,11 @@ import { Field, FieldType } from "@/types/common";
 // 标签样式配置
 const tagStyles: Record<FieldType, { bg: string; text: string }> = {
     'NC': { bg: 'bg-[#f5e8ff]', text: 'text-[#722ed1]' },
-    '赛意': { bg: 'bg-[#e8fffb]', text: 'text-[#0fc6c2]' },
+    'SMOM': { bg: 'bg-[#fff3e8]', text: 'text-[#ff8800]' },
     'TMS': { bg: 'bg-[#e8f3ff]', text: 'text-[#165dff]' },
+    'CRM': { bg: 'bg-[#e8ffea]', text: 'text-[#00d437]' },
+    'MRP': { bg: 'bg-[#ffe8f1]', text: 'text-[#ff0066]' },
+    '赛意': { bg: 'bg-[#e8fffb]', text: 'text-[#0fc6c2]' },
 };
 // 自定义Checkbox组件以完全匹配Figma设计
 const CustomCheckbox: React.FC<{
@@ -60,16 +63,19 @@ export const FieldsSection: React.FC<{
 }> = ({ fields, onFieldChange, onSelectAll, isAllSelected, isPartiallySelected }) => {
     // 按类型分组字段
     const ncFields = fields.filter(f => f.type === 'NC');
-    const saiyiFields = fields.filter(f => f.type === '赛意');
+    const smomFields = fields.filter(f => f.type === 'SMOM');
     const tmsFields = fields.filter(f => f.type === 'TMS');
+    const crmFields = fields.filter(f => f.type === 'CRM');
+    const mrpFields = fields.filter(f => f.type === 'MRP');
+    const saiyiFields = fields.filter(f => f.type === '赛意');
 
     return (
-        <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col gap-2.5 flex-1 min-h-0">
             <p className="text-sm font-medium text-[#1d2129]">
                 将以下勾选的字段数据同步到表格中
             </p>
 
-            <div className="bg-[#f7f8fa] rounded-[3px] p-[10px] h-[444px]">
+            <div className="bg-[#f7f8fa] rounded-[3px] p-[10px] flex-1 min-h-[300px]">
                 <div className="flex flex-col gap-2.5 h-full overflow-y-auto">
                     {/* 全选 */}
                     <div className="flex items-center gap-2">
@@ -101,10 +107,10 @@ export const FieldsSection: React.FC<{
                             </div>
                         )}
 
-                        {/* 赛意类字段 */}
-                        {saiyiFields.length > 0 && (
+                        {/* SMOM类字段 */}
+                        {smomFields.length > 0 && (
                             <div className="flex flex-col gap-2.5 mt-2">
-                                {saiyiFields.map(field => (
+                                {smomFields.map(field => (
                                     <FieldItem
                                         key={field.id}
                                         field={field}
@@ -118,6 +124,45 @@ export const FieldsSection: React.FC<{
                         {tmsFields.length > 0 && (
                             <div className="flex flex-col gap-2.5 mt-2">
                                 {tmsFields.map(field => (
+                                    <FieldItem
+                                        key={field.id}
+                                        field={field}
+                                        onCheckedChange={(checked) => onFieldChange(field.id, checked)}
+                                    />
+                                ))}
+                            </div>
+                        )}
+
+                        {/* CRM类字段 */}
+                        {crmFields.length > 0 && (
+                            <div className="flex flex-col gap-2.5 mt-2">
+                                {crmFields.map(field => (
+                                    <FieldItem
+                                        key={field.id}
+                                        field={field}
+                                        onCheckedChange={(checked) => onFieldChange(field.id, checked)}
+                                    />
+                                ))}
+                            </div>
+                        )}
+
+                        {/* MRP类字段 */}
+                        {mrpFields.length > 0 && (
+                            <div className="flex flex-col gap-2.5 mt-2">
+                                {mrpFields.map(field => (
+                                    <FieldItem
+                                        key={field.id}
+                                        field={field}
+                                        onCheckedChange={(checked) => onFieldChange(field.id, checked)}
+                                    />
+                                ))}
+                            </div>
+                        )}
+
+                        {/* 赛意类字段 */}
+                        {saiyiFields.length > 0 && (
+                            <div className="flex flex-col gap-2.5 mt-2">
+                                {saiyiFields.map(field => (
                                     <FieldItem
                                         key={field.id}
                                         field={field}

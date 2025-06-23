@@ -18,7 +18,7 @@ function Router() {
     <Switch>
       <Route path="/">
         <PluginLayout>
-          <FieldCompleteV2 />
+          <FieldAutoComplete />
         </PluginLayout>
       </Route>
       <Route path="/auto-complete">

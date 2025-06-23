@@ -1,6 +1,7 @@
-import { Field, getDataByIds, MockGetDataByIdsResult } from "@/lib/dataSync";
-import type { ITable } from "@lark-base-open/js-sdk";
-import { bitable, FieldType } from "@lark-base-open/js-sdk";
+import { getDataByIds, getFieldTypeMapping, MockGetDataByIdsResult } from "@/lib/dataSync";
+import { Field } from "@/types/common";
+import type { IDateTimeField, ITable } from "@lark-base-open/js-sdk";
+import { bitable, FieldType as BitableFieldType, DateFormatter } from "@lark-base-open/js-sdk";
 
 interface AutoCompleteParams {
   toast: (args: any) => void;
@@ -60,15 +61,21 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
     let existingFieldNames = allFields.map(f => f.name);
 
     // 2. 找出需要新建的字段
-    const fieldsToCreate = selectedFields.filter(f => !existingFieldNames.includes(f.mapping_field));
+    const fieldsToCreate = selectedFields.filter(f => !existingFieldNames.includes(f.name));
     console.log(`[AutoComplete] 需要新建 ${fieldsToCreate.length} 个字段`);
     // 3. 新建缺失字段
     for (const field of fieldsToCreate) {
       try {
-        await activeTable.addField({ name: field.mapping_field, type: FieldType.Text });
+        const fieldType = getFieldTypeMapping(field.name);
+        const newFieldMeta = await activeTable.addField({ name: field.name, type: fieldType as any });
+        if (fieldType === BitableFieldType.DateTime) {
+          console.log('newFieldMeta', newFieldMeta);
+          const newField = await activeTable.getField<IDateTimeField>(newFieldMeta);
+          await newField.setDateFormat(DateFormatter.DATE_TIME);
+        }
       } catch (error) {
-        console.warn(`[AutoComplete] 新建字段 ${field.mapping_field} 失败:`, error);
-        toast({ title: `新建字段 ${field.mapping_field} 失败`, description: '可能无表格编辑权限', variant: 'destructive' });
+        console.warn(`[AutoComplete] 新建字段 ${field.name} 失败:`, error);
+        toast({ title: `新建字段 ${field.name} 失败`, description: '可能无表格编辑权限', variant: 'destructive' });
         onComplete?.({
           status: 'no_permission',
           successCount: 0,
@@ -151,19 +158,26 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
         });
         continue;
       }
-
+      console.log(`[AutoComplete] 获取到 ${queryValue} 的值:`, rowMap);
       // 检查哪些字段需要更新
       const fieldsToUpdate: Record<string, any> = {};
       const changedFields: string[] = [];
       // selectedFields 中的name是英文名  mapping_field是字段名，是中文名
       for (const field of selectedFields) {
-        const fieldId = fieldNameToId[field.mapping_field];
+        const fieldId = fieldNameToId[field.name];
         if (!fieldId || fieldId === queryFieldId) {
           console.log(`[AutoComplete] 跳过查询字段本身:`, field.mapping_field);
           continue
         }; // 跳过查询字段本身
 
-        const newValue = rowMap[field.name];
+        let newValue: any = rowMap[field.mapping_field].value;
+        if (field.name.includes('计划开始时间') || field.name.includes('计划结束时间')) {
+          // 将时间字符串转换为时间戳
+          if (newValue && typeof newValue === 'string') {
+            const timestamp = new Date(newValue).getTime();
+            newValue = timestamp;
+          }
+        }
         console.log(`[AutoComplete] 获取到 ${field.name} 的值:`, newValue);
         if (newValue === undefined || newValue === null || newValue === '') {
           // 新增：收集未获取到的字段名
@@ -329,7 +343,7 @@ async function markRecordColors(table: ITable, statuses: RecordStatus[]) {
       try {
         const newField = await table.addField({
           name: statusFieldName,
-          type: FieldType.Text
+          type: BitableFieldType.Text
         });
         statusFieldId = newField;
       } catch (error) {

@@ -1,12 +1,14 @@
+import { FieldsSection } from "@/components/FieldSelection";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { useFeishuBase } from "@/hooks/use-feishu-base";
 import { useToast } from "@/hooks/use-toast";
 import { apiService } from "@/lib/apiService";
 import { autoCompleteFields } from "@/lib/autoCompleteHelper";
-import { Field, QueryType } from "@/lib/dataSync";
+import { QueryType } from "@/lib/dataSync";
 import { cn } from "@/lib/utils";
+import { Field } from "@/types/common";
 import { bitable } from "@lark-base-open/js-sdk";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import AutoCompleteProgress from "./AutoCompleteProgress";
 import AutoCompleteResult from "./AutoCompleteResult";
@@ -20,44 +22,6 @@ interface CompletionResult {
   unchangedCount: number;
 }
 
-// 默认字段配置 - 按查询类型分类
-const DEFAULT_AVAILABLE_FIELDS: Field[] = [
-  // 客户相关字段 (客户简称查询时显示)
-  // { name: 'accountName', mapping_field: '客户名称', query_type: 'customer' },
-  // { name: 'accountType', mapping_field: '客户类型', query_type: 'customer' },
-  // { name: 'industry', mapping_field: '所属行业', query_type: 'customer' },
-  // { name: 'region', mapping_field: '所在地区', query_type: 'customer' },
-
-  // 订单相关字段 (订单ID查询时显示)
-  { name: 'projectNo', mapping_field: '项目号', query_type: 'order' },
-  { name: 'orderNo', mapping_field: 'NC-SMOM-TMS-CRM订单号', query_type: 'order' },
-  { name: 'custShortName', mapping_field: 'NC客户简称', query_type: 'order' },
-  { name: 'materialIndex', mapping_field: 'NC索引', query_type: 'order' },
-  { name: 'incomeName', mapping_field: 'NC收款协议', query_type: 'order' },
-  { name: 'salesperson', mapping_field: 'NC销售业务员', query_type: 'order' },
-  { name: 'deliveryFactory', mapping_field: 'NC发货工厂', query_type: 'order' },
-  { name: 'quantityOnHand', mapping_field: 'NC现存量', query_type: 'order' },
-  { name: 'custRequestDate', mapping_field: 'NC客户要求日期', query_type: 'order' },
-  { name: 'deliveryDate', mapping_field: 'NC签署PI交期', query_type: 'order' },
-  { name: 'boxOrNot', mapping_field: 'NC箱盒是否下单', query_type: 'order' },
-  { name: 'plannedStartTime', mapping_field: 'SMOM计划开始时间（上线时间）', query_type: 'order' },
-  { name: 'planEndTime', mapping_field: 'SMOM计划完工时间', query_type: 'order' },
-  { name: 'needShipment', mapping_field: '是否需要出货', query_type: 'order' },
-  { name: 'bookingStatus', mapping_field: 'TMS订舱状态', query_type: 'order' },
-  { name: 'etd', mapping_field: 'TMS预计离港时间', query_type: 'order' },
-  { name: 'eta', mapping_field: 'TMS预计到港时间', query_type: 'order' },
-  { name: 'loadDate', mapping_field: 'TMS装柜时间', query_type: 'order' },
-  { name: 'customerCode', mapping_field: 'NC-CRM客户编码', query_type: 'order' },
-  { name: 'custName', mapping_field: 'CRM客户全称', query_type: 'order' },
-  { name: 'publicSea', mapping_field: 'CRM所属区域公海', query_type: 'order' },
-  { name: 'country', mapping_field: 'CRM国家', query_type: 'order' },
-  { name: 'collectionAgreement', mapping_field: 'CRM收款协议', query_type: 'order' },
-  { name: 'paymentPeriod', mapping_field: 'CRM账期（天）', query_type: 'order' },
-  { name: 'publicSeaPoolStatus', mapping_field: 'CRM公海池状态', query_type: 'order' },
-  { name: 'estimatedRecoveryTime', mapping_field: 'CRM预计回收时间', query_type: 'order' },
-  { name: 'isDraft', mapping_field: 'MRP是否定稿', query_type: 'order' },
-
-];
 
 // 查询类型选项
 const QUERY_TYPE_OPTIONS = [
@@ -68,39 +32,22 @@ const QUERY_TYPE_OPTIONS = [
 /**
  * 从多维表格配置中获取字段映射配置
  */
-async function getMappingConfig(): Promise<Field[]> {
-  try {
-    const config = await bitable.bridge.getData<Field[]>('mapping_config');
-    if (config && Array.isArray(config) && config.length > 0) {
-      console.log('[FieldAutoComplete] 从配置中读取到字段映射:', config.length, '个字段');
-      return config;
-    }
-  } catch (error) {
-    console.warn('[FieldAutoComplete] 读取配置失败，使用默认配置:', error);
-  }
+// async function getMappingConfig(): Promise<Field[]> {
+//   try {
+//     const config = await bitable.bridge.getData<Field[]>('mapping_config');
+//     if (config && Array.isArray(config) && config.length > 0) {
+//       console.log('[FieldAutoComplete] 从配置中读取到字段映射:', config.length, '个字段');
+//       return config;
+//     }
+//   } catch (error) {
+//     console.warn('[FieldAutoComplete] 读取配置失败，使用默认配置:', error);
+//   }
 
-  console.log('[FieldAutoComplete] 使用默认字段配置');
-  return DEFAULT_AVAILABLE_FIELDS;
-}
+//   console.log('[FieldAutoComplete] 使用默认字段配置');
+//   return DEFAULT_AVAILABLE_FIELDS;
+// }
 
-/**
- * 根据查询类型过滤字段列表
- * @param fields 所有字段列表
- * @param queryType 查询类型
- * @returns 过滤后的字段列表
- */
-function getFieldsByQueryType(fields: Field[], queryType: QueryType): Field[] {
-  return fields.filter(field => {
-    if (!field.query_type) return true; // 兼容旧数据
-    if (queryType === QueryType.ORDER) {
-      // 订单ID查询：显示订单字段 + 客户字段 + 通用字段
-      return field.query_type === 'order' || field.query_type === 'customer' || field.query_type === 'both';
-    } else {
-      // 客户简称查询：只显示客户字段 + 通用字段
-      return field.query_type === 'customer' || field.query_type === 'both';
-    }
-  });
-}
+
 
 // 自定义Select组件以匹配Figma设计
 const CustomSelect: React.FC<{
@@ -185,12 +132,21 @@ const CustomCheckbox: React.FC<{
 const FieldTag: React.FC<{ type: string }> = ({ type }) => {
   // 根据字段类型确定标签样式
   const getTagStyle = () => {
-    if (type === 'customer') {
-      return { bg: 'bg-[#e8fffb]', text: 'text-[#0fc6c2]', label: '客户' };
-    } else if (type === 'order') {
-      return { bg: 'bg-[#e8f3ff]', text: 'text-[#165dff]', label: '订单' };
-    } else {
-      return { bg: 'bg-[#f5e8ff]', text: 'text-[#722ed1]', label: '通用' };
+    switch (type) {
+      case 'NC':
+        return { bg: 'bg-[#f5e8ff]', text: 'text-[#722ed1]', label: 'NC' };
+      case 'SMOM':
+        return { bg: 'bg-[#fff3e8]', text: 'text-[#ff8800]', label: 'SMOM' };
+      case 'TMS':
+        return { bg: 'bg-[#e8f3ff]', text: 'text-[#165dff]', label: 'TMS' };
+      case 'CRM':
+        return { bg: 'bg-[#e8ffea]', text: 'text-[#00d437]', label: 'CRM' };
+      case 'MRP':
+        return { bg: 'bg-[#ffe8f1]', text: 'text-[#ff0066]', label: 'MRP' };
+      case '赛意':
+        return { bg: 'bg-[#e8fffb]', text: 'text-[#0fc6c2]', label: '赛意' };
+      default:
+        return { bg: 'bg-[#f5e8ff]', text: 'text-[#722ed1]', label: type };
     }
   };
 
@@ -202,33 +158,47 @@ const FieldTag: React.FC<{ type: string }> = ({ type }) => {
   );
 };
 
-// 字段项组件
-const FieldItem: React.FC<{
-  field: Field;
-  isChecked: boolean;
-  onCheckedChange: (checked: boolean) => void;
-}> = ({ field, isChecked, onCheckedChange }) => {
-  return (
-    <div className="flex items-center justify-between pr-2">
-      <div className="flex items-center gap-2">
-        <CustomCheckbox
-          id={field.name}
-          checked={isChecked}
-          onCheckedChange={onCheckedChange}
-        />
-        <label
-          htmlFor={field.name}
-          className="text-sm leading-[22px] select-none text-[#1d2129] cursor-pointer"
-        >
-          {field.mapping_field}
-        </label>
-        <FieldTag type={field.query_type || 'both'} />
-      </div>
-    </div>
-  );
-};
 
 const FieldAutoComplete = () => {
+  // 初始化字段数据
+  const [fields, setFields] = useState<Field[]>([
+    // NC字段
+    { id: 'orderNo', name: '订单ID', mapping_field: 'orderNo', type: 'NC', isChecked: false, isDisabled: false },
+    { id: 'custShortName', name: '客户简称', mapping_field: 'custShortName', type: 'NC', isChecked: false, isDisabled: false },
+    { id: 'materialIndex', name: '产品索引号', mapping_field: 'materialIndex', type: 'NC', isChecked: false, isDisabled: false },
+    { id: 'debitamount', name: '已收款金额', mapping_field: 'debitamount', type: 'NC', isChecked: false, isDisabled: false },
+    { id: 'incomeName', name: '收款协议', mapping_field: 'incomeName', type: 'NC', isChecked: false, isDisabled: false },
+    { id: 'quantityOnHand', name: '现存量', mapping_field: 'quantityOnHand', type: 'NC', isChecked: false, isDisabled: false },
+    { id: 'salesperson', name: '销售负责人', mapping_field: 'salesperson', type: 'NC', isChecked: false, isDisabled: false },
+    { id: 'deliveryFactory', name: '发货工厂', mapping_field: 'deliveryFactory', type: 'NC', isChecked: false, isDisabled: false },
+    { id: 'custRequestDate', name: '客户要求日期', mapping_field: 'custRequestDate', type: 'NC', isChecked: false, isDisabled: false },
+    { id: 'deliveryDate', name: '签署PI交期', mapping_field: 'deliveryDate', type: 'NC', isChecked: false, isDisabled: false },
+    { id: 'boxOrNot', name: '箱盒是否下单', mapping_field: 'boxOrNot', type: 'NC', isChecked: false, isDisabled: false },
+
+    // SMOM字段
+    { id: 'plannedStartTime', name: '计划开始时间', mapping_field: 'plannedStartTime', type: 'SMOM', isChecked: false, isDisabled: false },
+    { id: 'planEndTime', name: '计划结束时间', mapping_field: 'planEndTime', type: 'SMOM', isChecked: false, isDisabled: false },
+
+    // TMS字段
+    { id: 'bookingStatus', name: '订舱状态', mapping_field: 'bookingStatus', type: 'TMS', isChecked: false, isDisabled: false },
+    { id: 'etd', name: 'ETD', mapping_field: 'etd', type: 'TMS', isChecked: false, isDisabled: false },
+    { id: 'eta', name: 'ETA', mapping_field: 'eta', type: 'TMS', isChecked: false, isDisabled: false },
+    { id: 'loadDate', name: '装柜时间', mapping_field: 'loadDate', type: 'TMS', isChecked: false, isDisabled: false },
+    { id: 'needShipment', name: '是否需要出货', mapping_field: 'needShipment', type: 'TMS', isChecked: false, isDisabled: false },
+
+    // CRM字段
+    { id: 'customerCode', name: '客户编码', mapping_field: 'customerCode', type: 'CRM', isChecked: false, isDisabled: false },
+    { id: 'custName', name: '客户全称', mapping_field: 'custName', type: 'CRM', isChecked: false, isDisabled: false },
+    { id: 'country', name: '客户国家', mapping_field: 'country', type: 'CRM', isChecked: false, isDisabled: false },
+    { id: 'publicSea', name: '所属区域公海', mapping_field: 'publicSea', type: 'CRM', isChecked: false, isDisabled: false },
+    { id: 'publicSeaPoolStatus', name: '公海池状态', mapping_field: 'publicSeaPoolStatus', type: 'CRM', isChecked: false, isDisabled: false },
+    { id: 'paymentPeriod', name: '账期', mapping_field: 'paymentPeriod', type: 'CRM', isChecked: false, isDisabled: false },
+    { id: 'collectionAgreement', name: '收款协议', mapping_field: 'collectionAgreement', type: 'CRM', isChecked: false, isDisabled: false },
+    { id: 'estimatedRecoveryTime', name: '预计回收时间', mapping_field: 'estimatedRecoveryTime', type: 'CRM', isChecked: false, isDisabled: false },
+
+    // MRP字段
+    { id: 'isDraft', name: '图稿状态', mapping_field: 'isDraft', type: 'MRP', isChecked: false, isDisabled: false },
+  ]);
   const { toast } = useToast();
   const {
     selection,
@@ -238,19 +208,35 @@ const FieldAutoComplete = () => {
   const [pageState, setPageState] = useState<PageState>('form');
   const [queryType, setQueryType] = useState<QueryType>(QueryType.CUSTOMER); // 默认选中客户简称
   const [firstColumnFieldId, setFirstColumnFieldId] = useState<string>(""); // 第一列字段ID
+  const [firstColumnFieldName, setFirstColumnFieldName] = useState<string>(""); // 第一列字段名称
   const [dataSource, setDataSource] = useState<number>(1);
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [searchPerformed, setSearchPerformed] = useState(false);
-  const [availableFields, setAvailableFields] = useState<Field[]>([]);
-  const [filteredFields, setFilteredFields] = useState<Field[]>([]);
-  const [selectedFields, setSelectedFields] = useState<Field[]>([]);
   const [tableName, setTableName] = useState<string>("");
-  const [configLoading, setConfigLoading] = useState(true);
+  const [configLoading, setConfigLoading] = useState(false);
   const [currentTable, setCurrentTable] = useState<any>(null);
 
   // 进度相关状态
   const [progressData, setProgressData] = useState({ completed: 0, total: 0 });
   const [completionResult, setCompletionResult] = useState<CompletionResult | null>(null);
+
+  // 处理字段选择变化
+  const handleFieldChange = (id: string, checked: boolean) => {
+    setFields(prev => prev.map(field =>
+      field.id === id ? { ...field, isChecked: checked } : field
+    ));
+  };
+
+  // 处理全选
+  const handleSelectAll = (checked: boolean) => {
+    setFields(prev => prev.map(field =>
+      field.isDisabled ? field : { ...field, isChecked: checked }
+    ));
+  };
+
+  // 计算全选状态
+  const selectableFields = fields.filter(f => !f.isDisabled);
+  const selectedCount = selectableFields.filter(f => f.isChecked).length;
+  const isAllSelected = selectableFields.length > 0 && selectedCount === selectableFields.length;
+  const isPartiallySelected = selectedCount > 0 && selectedCount < selectableFields.length;
 
   // 获取第一列字段ID
   useEffect(() => {
@@ -271,8 +257,33 @@ const FieldAutoComplete = () => {
           // 获取字段名称用于日志
           const firstField = await table.getFieldById(firstFieldId);
           const name = await firstField.getName();
+          setFirstColumnFieldName(name);
           console.log('[FieldAutoComplete] A列字段ID:', firstFieldId, '字段名称:', name);
         }
+
+        // 获取所有字段名称
+        const allFields = await table.getFieldList();
+        const fieldNames = new Set<string>();
+
+        for (const field of allFields) {
+          const fieldName = await field.getName();
+          fieldNames.add(fieldName);
+        }
+
+        console.log('[FieldAutoComplete] 表格现有字段:', Array.from(fieldNames));
+
+        // 更新fields状态，将已存在的字段设置为选中且禁用
+        setFields(prevFields =>
+          prevFields.map(field => {
+            const isExistingField = fieldNames.has(field.name);
+            return {
+              ...field,
+              isChecked: isExistingField ? true : field.isChecked,
+              isDisabled: isExistingField,
+              helperText: isExistingField ? '数据表已有字段默认选中' : undefined
+            };
+          })
+        );
       } catch (error) {
         console.error('[FieldAutoComplete] 初始化表格失败:', error);
         toast({
@@ -286,54 +297,6 @@ const FieldAutoComplete = () => {
     initializeTable();
   }, [toast]);
 
-  // 获取字段映射配置
-  useEffect(() => {
-    const fetchMappingConfig = async () => {
-      setConfigLoading(true);
-      try {
-        const fields = await getMappingConfig();
-        setAvailableFields(fields);
-
-        // 根据默认查询类型过滤字段
-        const filtered = getFieldsByQueryType(fields, queryType);
-        setFilteredFields(filtered);
-
-        console.log('[FieldAutoComplete] 字段配置加载完成:', fields.length, '个字段，过滤后:', filtered.length, '个字段');
-      } catch (error) {
-        console.error('[FieldAutoComplete] 加载字段配置失败:', error);
-        // 出错时使用默认配置
-        setAvailableFields(DEFAULT_AVAILABLE_FIELDS);
-        const filtered = getFieldsByQueryType(DEFAULT_AVAILABLE_FIELDS, queryType);
-        setFilteredFields(filtered);
-      } finally {
-        setConfigLoading(false);
-      }
-    };
-
-    fetchMappingConfig();
-  }, []);
-
-  // 当查询类型改变时，更新可选字段列表
-  useEffect(() => {
-    if (availableFields.length > 0) {
-      const filtered = getFieldsByQueryType(availableFields, queryType);
-      setFilteredFields(filtered);
-
-      // 过滤已选字段，只保留在新的过滤列表中的字段
-      const validSelectedFields = selectedFields.filter(selectedField =>
-        filtered.some(filteredField =>
-          filteredField.name === selectedField.name && filteredField.mapping_field === selectedField.mapping_field
-        )
-      );
-
-      // 如果过滤后的已选字段数量发生变化，更新状态
-      if (validSelectedFields.length !== selectedFields.length) {
-        setSelectedFields(validSelectedFields);
-      }
-
-      console.log('[FieldAutoComplete] 查询类型变更:', queryType, '过滤后字段数量:', filtered.length, '保留已选字段数量:', validSelectedFields.length);
-    }
-  }, [queryType, availableFields]);
 
   // 直接从apiService获取字段映射
   const { data: mappingsData } = useQuery({
@@ -352,33 +315,6 @@ const FieldAutoComplete = () => {
     }
   }, [mappingsData]);
 
-  // 搜索变更 - 直接使用apiService
-  const { mutate: searchMutate, isPending: isSearching } = useMutation({
-    mutationFn: async () => {
-      const result = await apiService.search({
-        query: searchQuery,
-        field: firstColumnFieldId, // 使用第一列字段ID
-        apiConfigId: dataSource,
-        selection: selection || undefined
-      });
-      return result;
-    },
-    onSuccess: () => {
-      setSearchPerformed(true);
-      toast({
-        variant: "default",
-        title: "搜索完成",
-        description: "成功获取数据",
-      });
-    },
-    onError: (error) => {
-      toast({
-        variant: "destructive",
-        title: "搜索失败",
-        description: error.message,
-      });
-    }
-  });
 
   useEffect(() => {
     // 定义回调
@@ -388,6 +324,30 @@ const FieldAutoComplete = () => {
         if (table && typeof table.getName === "function") {
           const name = await table.getName();
           setTableName(name);
+
+          // 获取所有字段名称
+          const allFields = await table.getFieldList();
+          const fieldNames = new Set<string>();
+
+          for (const field of allFields) {
+            const fieldName = await field.getName();
+            fieldNames.add(fieldName);
+          }
+
+          console.log('[FieldAutoComplete] 表格切换，现有字段:', Array.from(fieldNames));
+
+          // 更新fields状态，将已存在的字段设置为选中且禁用
+          setFields(prevFields =>
+            prevFields.map(field => {
+              const isExistingField = fieldNames.has(field.name);
+              return {
+                ...field,
+                isChecked: isExistingField ? true : field.isChecked,
+                isDisabled: isExistingField,
+                helperText: isExistingField ? '数据表已有字段默认选中' : undefined
+              };
+            })
+          );
         } else {
           setTableName("");
         }
@@ -411,6 +371,9 @@ const FieldAutoComplete = () => {
 
   const handleApply = async () => {
     try {
+      // 获取选中的字段
+      const selectedFields = fields.filter(f => f.isChecked);
+
       console.log('[FieldAutoComplete] 开始补全，查询类型:', queryType, '第一列字段ID:', firstColumnFieldId);
 
       if (!firstColumnFieldId) {
@@ -477,6 +440,7 @@ const FieldAutoComplete = () => {
   if (pageState === 'result' && completionResult) {
     return (
       <AutoCompleteResult
+        status={completionResult.status}
         successCount={completionResult.successCount}
         errorCount={completionResult.errorCount}
         unchangedCount={completionResult.unchangedCount}
@@ -501,7 +465,7 @@ const FieldAutoComplete = () => {
     <div className="w-full h-full bg-white flex flex-col">
       {/* 内容区域 */}
       <div className="flex-1 flex flex-col px-3 sm:px-4 md:px-5 py-4 gap-4 overflow-y-auto">
-        {/* 条件设置区域 */}
+        {/* 条件设置 */}
         <div className="flex flex-col gap-2.5">
           <div className="flex items-center gap-[5px] flex-wrap">
             <span className="text-sm font-medium text-[#1d2129]">当</span>
@@ -516,13 +480,9 @@ const FieldAutoComplete = () => {
 
             <span className="text-sm font-medium text-[#1d2129]">中的</span>
 
-            <CustomSelect
-              value={queryType}
-              onValueChange={(value) => setQueryType(value as QueryType)}
-              placeholder="选择查询类型"
-              options={QUERY_TYPE_OPTIONS}
-              className="w-[90px] sm:w-[100px] md:w-[103px]"
-            />
+            <div className="bg-[#f2f3f5] border-0 h-[30px] px-3 py-1 rounded-sm flex items-center justify-center text-sm text-[#1d2129] w-auto min-w-[90px] sm:min-w-[100px] md:min-w-[103px]">
+              <span>{firstColumnFieldName || '...'}</span>
+            </div>
 
             <span className="text-sm font-medium text-[#1d2129]">字段</span>
           </div>
@@ -532,7 +492,8 @@ const FieldAutoComplete = () => {
 
             <div className="bg-[#f2f3f5] h-[30px] px-3 py-1 rounded-sm flex-1 min-w-[150px] max-w-[221px] flex items-center">
               <span className="text-sm text-[#1d2129]">
-                {queryType === QueryType.CUSTOMER ? '客户简称' : '订单ID'}
+                {/* {queryType === QueryType.CUSTOMER ? '客户简称' : '订单ID'} */}
+                订单号，例如：IN20240404
               </span>
             </div>
 
@@ -540,70 +501,14 @@ const FieldAutoComplete = () => {
           </div>
         </div>
 
-        {/* 字段选择区域 */}
-        <div className="flex flex-col gap-2.5 flex-1 min-h-0">
-          <p className="text-sm font-medium text-[#1d2129]">
-            将以下勾选的字段数据同步到表格中
-          </p>
-
-          <div className="bg-[#f7f8fa] rounded-[3px] p-2 sm:p-[10px] flex-1 min-h-[300px]">
-            <div className="flex flex-col gap-2.5 h-full overflow-y-auto">
-              {/* 全选 */}
-              <div className="flex items-center gap-2">
-                <CustomCheckbox
-                  id="select-all"
-                  checked={selectedFields.length === filteredFields.length && filteredFields.length > 0}
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      setSelectedFields([...filteredFields]);
-                    } else {
-                      setSelectedFields([]);
-                    }
-                  }}
-                  indeterminate={selectedFields.length > 0 && selectedFields.length < filteredFields.length}
-                />
-                <label htmlFor="select-all" className="text-sm font-medium text-[#1d2129] cursor-pointer select-none">
-                  全选
-                </label>
-              </div>
-
-              {/* 分隔线 */}
-              <div className="h-px bg-[#e5e6eb] -mx-2 sm:-mx-[10px]" />
-
-              {/* 字段列表 */}
-              <div className="flex flex-col gap-2.5">
-                {configLoading ? (
-                  <div className="text-center py-4">
-                    <div className="text-sm text-[#86909C]">正在加载字段配置...</div>
-                  </div>
-                ) : filteredFields.length === 0 ? (
-                  <div className="text-center py-4">
-                    <div className="text-sm text-[#86909C]">暂无可用字段</div>
-                  </div>
-                ) : (
-                  filteredFields.map((field) => (
-                    <FieldItem
-                      key={`${field.name}-${field.mapping_field}`}
-                      field={field}
-                      isChecked={selectedFields.some(
-                        sf => sf.name === field.name && sf.mapping_field === field.mapping_field
-                      )}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setSelectedFields([...selectedFields, field]);
-                        } else {
-                          setSelectedFields(selectedFields.filter(
-                            sf => !(sf.name === field.name && sf.mapping_field === field.mapping_field)
-                          ));
-                        }
-                      }}
-                    />
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* 字段选择 */}
+        <FieldsSection
+          fields={fields}
+          onFieldChange={handleFieldChange}
+          onSelectAll={handleSelectAll}
+          isAllSelected={isAllSelected}
+          isPartiallySelected={isPartiallySelected}
+        />
       </div>
 
       {/* 底部区域 */}
@@ -613,10 +518,10 @@ const FieldAutoComplete = () => {
         </p>
         <button
           onClick={handleApply}
-          disabled={selectedFields.length === 0}
+          disabled={fields.filter(f => f.isChecked).length === 0}
           className={cn(
             "w-full h-8 text-white text-sm font-medium rounded-sm transition-colors flex items-center justify-center",
-            selectedFields.length === 0
+            fields.filter(f => f.isChecked).length === 0
               ? "bg-[#c9cdd4] cursor-not-allowed"
               : "bg-[#165dff] hover:bg-[#4080ff]"
           )}

@@ -10,7 +10,7 @@ const InfoMessage: React.FC = () => {
                 </div>
                 <p className="text-sm font-medium text-[#1d2129]">
                     如需帮助，请
-                    <a href="#" className="text-[#007aff] hover:underline">
+                    <a href="https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=feer8ca0-aa20-45f8-9d9d-845c19e28b98" target="_blank" rel="noopener noreferrer" className="text-[#007aff] hover:underline">
                         加入群聊反馈
                     </a>
                 </p>

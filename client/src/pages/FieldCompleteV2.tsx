@@ -1,133 +1,133 @@
+import ConditionSection from '@/components/condition';
 import { FieldsSection } from '@/components/FieldSelection';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger
-} from '@/components/ui/select';
-import { cn } from '@/lib/utils';
 import { Field } from '@/types/common';
-import React, { useState } from 'react';
-
-
-
-
-// 自定义Select组件以匹配Figma设计
-const CustomSelect: React.FC<{
-    value: string;
-    onValueChange: (value: string) => void;
-    placeholder?: string;
-    options: { value: string; label: string }[];
-    className?: string;
-}> = ({ value, onValueChange, placeholder, options, className }) => {
-    const selectedOption = options.find(opt => opt.value === value);
-
-    return (
-        <Select value={value} onValueChange={onValueChange}>
-            <SelectTrigger className={cn(
-                "bg-[#f2f3f5] border-0 h-[30px] px-3 py-1 rounded-sm",
-                "focus:ring-0 focus:ring-offset-0 hover:bg-[#e8e9eb]",
-                className
-            )}>
-                <span className={cn(
-                    "text-sm font-normal",
-                    selectedOption ? "text-[#1d2129]" : "text-[#c9cdd4]"
-                )}>
-                    {selectedOption?.label || placeholder}
-                </span>
-            </SelectTrigger>
-            <SelectContent>
-                {options.map(option => (
-                    <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                    </SelectItem>
-                ))}
-            </SelectContent>
-        </Select>
-    );
-};
-
-
-
-// 条件设置区域组件
-const ConditionSection: React.FC = () => {
-    const [table, setTable] = useState('table1');
-    const [field, setField] = useState('field1');
-    const [content, setContent] = useState('content1');
-
-    return (
-        <div className="flex flex-col gap-2.5">
-            <div className="flex items-center gap-[5px] flex-wrap">
-                <span className="text-sm font-medium text-[#1d2129]">当</span>
-
-                <CustomSelect
-                    value={table}
-                    onValueChange={setTable}
-                    placeholder="选择表格"
-                    options={[
-                        { value: 'table1', label: '欧洲一区项目跟进表' },
-                        { value: 'table2', label: '亚洲区项目跟进表' }
-                    ]}
-                    className="w-[173px]"
-                />
-
-                <span className="text-sm font-medium text-[#1d2129]">中的</span>
-
-                <CustomSelect
-                    value={field}
-                    onValueChange={setField}
-                    placeholder="选择字段"
-                    options={[
-                        { value: 'field1', label: 'PI号' },
-                        { value: 'field2', label: '订单号' }
-                    ]}
-                    className="w-[103px]"
-                />
-
-                <span className="text-sm font-medium text-[#1d2129]">字段</span>
-            </div>
-
-            <div className="flex items-center gap-[5px] flex-wrap">
-                <span className="text-sm font-medium text-[#1d2129]">内容是</span>
-
-                <CustomSelect
-                    value={content}
-                    onValueChange={setContent}
-                    placeholder="选择内容格式"
-                    options={[
-                        { value: 'content1', label: '订单号，例如：IN20240404' },
-                        { value: 'content2', label: '合同号，例如：CN20240404' }
-                    ]}
-                    className="w-[221px]"
-                />
-
-                <span className="text-base font-medium text-[#1d2129]">时，</span>
-            </div>
-        </div>
-    );
-};
-
+import { bitable } from "@lark-base-open/js-sdk";
+import React, { useEffect, useState } from 'react';
 
 // 主组件
 const FieldCompleteV2: React.FC = () => {
     // 初始化字段数据
     const [fields, setFields] = useState<Field[]>([
-        // NC类字段（已选中但禁用）
-        { id: 'nc1', name: '订单号', type: 'NC', isChecked: true, isDisabled: true, helperText: '数据表已有字段默认选中' },
-        { id: 'nc2', name: '客户名称', type: 'NC', isChecked: true, isDisabled: true, helperText: '数据表已有字段默认选中' },
-        { id: 'nc3', name: '产品编码', type: 'NC', isChecked: true, isDisabled: true, helperText: '数据表已有字段默认选中' },
-        { id: 'nc4', name: '数量', type: 'NC', isChecked: true, isDisabled: true, helperText: '数据表已有字段默认选中' },
-        { id: 'nc5', name: '金额', type: 'NC', isChecked: true, isDisabled: true, helperText: '数据表已有字段默认选中' },
-        // 赛意类字段（未选中）
-        { id: 'saiyi1', name: '发货日期', type: '赛意', isChecked: false, isDisabled: false },
-        { id: 'saiyi2', name: '物流单号', type: '赛意', isChecked: false, isDisabled: false },
-        { id: 'saiyi3', name: '收货地址', type: '赛意', isChecked: false, isDisabled: false },
-        // TMS类字段（已选中）
-        { id: 'tms1', name: '运输方式', type: 'TMS', isChecked: true, isDisabled: false },
-        { id: 'tms2', name: '承运商', type: 'TMS', isChecked: true, isDisabled: false },
-        { id: 'tms3', name: '预计到达时间', type: 'TMS', isChecked: true, isDisabled: false },
-        { id: 'tms4', name: '运费', type: 'TMS', isChecked: true, isDisabled: false },
+        // NC字段
+        { id: 'orderNo', name: '订单ID', mapping_field: 'orderNo', type: 'NC', isChecked: false, isDisabled: false },
+        { id: 'custShortName', name: '客户简称', mapping_field: 'custShortName', type: 'NC', isChecked: false, isDisabled: false },
+        { id: 'materialIndex', name: '产品索引号', mapping_field: 'materialIndex', type: 'NC', isChecked: false, isDisabled: false },
+        { id: 'debitamount', name: '已收款金额', mapping_field: 'debitamount', type: 'NC', isChecked: false, isDisabled: false },
+        { id: 'incomeName', name: '收款协议', mapping_field: 'incomeName', type: 'NC', isChecked: false, isDisabled: false },
+        { id: 'quantityOnHand', name: '现存量', mapping_field: 'quantityOnHand', type: 'NC', isChecked: false, isDisabled: false },
+        { id: 'salesperson', name: '销售负责人', mapping_field: 'salesperson', type: 'NC', isChecked: false, isDisabled: false },
+        { id: 'deliveryFactory', name: '发货工厂', mapping_field: 'deliveryFactory', type: 'NC', isChecked: false, isDisabled: false },
+        { id: 'custRequestDate', name: '客户要求日期', mapping_field: 'custRequestDate', type: 'NC', isChecked: false, isDisabled: false },
+        { id: 'deliveryDate', name: '签署PI交期', mapping_field: 'deliveryDate', type: 'NC', isChecked: false, isDisabled: false },
+        { id: 'boxOrNot', name: '箱盒是否下单', mapping_field: 'boxOrNot', type: 'NC', isChecked: false, isDisabled: false },
+
+        // SMOM字段
+        { id: 'plannedStartTime', name: '计划开始时间', mapping_field: 'plannedStartTime', type: 'SMOM', isChecked: false, isDisabled: false },
+        { id: 'planEndTime', name: '计划结束时间', mapping_field: 'planEndTime', type: 'SMOM', isChecked: false, isDisabled: false },
+
+        // TMS字段
+        { id: 'bookingStatus', name: '订舱状态', mapping_field: 'bookingStatus', type: 'TMS', isChecked: false, isDisabled: false },
+        { id: 'etd', name: 'ETD', mapping_field: 'etd', type: 'TMS', isChecked: false, isDisabled: false },
+        { id: 'eta', name: 'ETA', mapping_field: 'eta', type: 'TMS', isChecked: false, isDisabled: false },
+        { id: 'loadDate', name: '装柜时间', mapping_field: 'loadDate', type: 'TMS', isChecked: false, isDisabled: false },
+        { id: 'needShipment', name: '是否需要出货', mapping_field: 'needShipment', type: 'TMS', isChecked: false, isDisabled: false },
+
+        // CRM字段
+        { id: 'customerCode', name: '客户编码', mapping_field: 'customerCode', type: 'CRM', isChecked: false, isDisabled: false },
+        { id: 'custName', name: '客户全称', mapping_field: 'custName', type: 'CRM', isChecked: false, isDisabled: false },
+        { id: 'country', name: '客户国家', mapping_field: 'country', type: 'CRM', isChecked: false, isDisabled: false },
+        { id: 'publicSea', name: '所属区域公海', mapping_field: 'publicSea', type: 'CRM', isChecked: false, isDisabled: false },
+        { id: 'publicSeaPoolStatus', name: '公海池状态', mapping_field: 'publicSeaPoolStatus', type: 'CRM', isChecked: false, isDisabled: false },
+        { id: 'paymentPeriod', name: '账期', mapping_field: 'paymentPeriod', type: 'CRM', isChecked: false, isDisabled: false },
+        { id: 'collectionAgreement', name: '收款协议', mapping_field: 'collectionAgreement', type: 'CRM', isChecked: false, isDisabled: false },
+        { id: 'estimatedRecoveryTime', name: '预计回收时间', mapping_field: 'estimatedRecoveryTime', type: 'CRM', isChecked: false, isDisabled: false },
+
+        // MRP字段
+        { id: 'isDraft', name: '图稿状态', mapping_field: 'isDraft', type: 'MRP', isChecked: false, isDisabled: false },
     ]);
+
+    // 初始化时获取表格字段
+    useEffect(() => {
+        const initializeTable = async () => {
+            try {
+                const table = await bitable.base.getActiveTable();
+
+                // 获取所有字段名称
+                const allFields = await table.getFieldList();
+                const fieldNames = new Set<string>();
+
+                for (const field of allFields) {
+                    const fieldName = await field.getName();
+                    fieldNames.add(fieldName);
+                }
+
+                console.log('[FieldCompleteV2] 表格现有字段:', Array.from(fieldNames));
+
+                // 更新fields状态，将已存在的字段设置为选中且禁用
+                setFields(prevFields =>
+                    prevFields.map(field => {
+                        const isExistingField = fieldNames.has(field.name);
+                        return {
+                            ...field,
+                            isChecked: isExistingField ? true : field.isChecked,
+                            isDisabled: isExistingField,
+                            helperText: isExistingField ? '数据表已有字段默认选中' : undefined
+                        };
+                    })
+                );
+            } catch (error) {
+                console.error('[FieldCompleteV2] 初始化表格失败:', error);
+            }
+        };
+
+        initializeTable();
+    }, []);
+
+    // 监听表格切换
+    useEffect(() => {
+        const handleSelectionChange = async () => {
+            try {
+                const table = await bitable.base.getActiveTable();
+                if (table) {
+                    // 获取所有字段名称
+                    const allFields = await table.getFieldList();
+                    const fieldNames = new Set<string>();
+
+                    for (const field of allFields) {
+                        const fieldName = await field.getName();
+                        fieldNames.add(fieldName);
+                    }
+
+                    console.log('[FieldCompleteV2] 表格切换，现有字段:', Array.from(fieldNames));
+
+                    // 更新fields状态，将已存在的字段设置为选中且禁用
+                    setFields(prevFields =>
+                        prevFields.map(field => {
+                            const isExistingField = fieldNames.has(field.name);
+                            return {
+                                ...field,
+                                isChecked: isExistingField ? true : field.isChecked,
+                                isDisabled: isExistingField,
+                                helperText: isExistingField ? '数据表已有字段默认选中' : undefined
+                            };
+                        })
+                    );
+                }
+            } catch (error) {
+                console.error('[FieldCompleteV2] 获取表格字段失败:', error);
+            }
+        };
+
+        // 注册监听
+        const off = bitable.base.onSelectionChange(handleSelectionChange);
+        // 初始化时主动获取一次
+        handleSelectionChange();
+
+        // 卸载时移除监听
+        return () => {
+            if (typeof off === "function") off();
+        };
+    }, []);
 
     // 处理字段选择变化
     const handleFieldChange = (id: string, checked: boolean) => {
