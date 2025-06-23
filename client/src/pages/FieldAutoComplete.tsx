@@ -470,17 +470,13 @@ const FieldAutoComplete = () => {
           <div className="flex items-center gap-[5px] flex-wrap">
             <span className="text-sm font-medium text-[#1d2129]">当</span>
 
-            <input
-              type="text"
-              className="bg-[#f2f3f5] border-0 h-[30px] px-3 py-1 rounded-sm flex-1 min-w-[120px] max-w-[173px] text-sm text-[#1d2129]"
-              value={tableName || '未获取到表格名称'}
-              disabled
-              readOnly
-            />
+            <div className="bg-[#f2f3f5] border-0 h-[30px] px-3 py-1 rounded-sm flex items-center text-sm text-[#1d2129] w-auto">
+              <span>{tableName || '未获取到表格名称'}</span>
+            </div>
 
             <span className="text-sm font-medium text-[#1d2129]">中的</span>
 
-            <div className="bg-[#f2f3f5] border-0 h-[30px] px-3 py-1 rounded-sm flex items-center justify-center text-sm text-[#1d2129] w-auto min-w-[90px] sm:min-w-[100px] md:min-w-[103px]">
+            <div className="bg-[#f2f3f5] border-0 h-[30px] px-3 py-1 rounded-sm flex items-center text-sm text-[#1d2129] w-auto">
               <span>{firstColumnFieldName || '...'}</span>
             </div>
 
@@ -490,7 +486,7 @@ const FieldAutoComplete = () => {
           <div className="flex items-center gap-[5px] flex-wrap">
             <span className="text-sm font-medium text-[#1d2129]">内容是</span>
 
-            <div className="bg-[#f2f3f5] h-[30px] px-3 py-1 rounded-sm flex-1 min-w-[150px] max-w-[221px] flex items-center">
+            <div className="bg-[#f2f3f5] h-[30px] px-3 py-1 rounded-sm flex items-center w-auto">
               <span className="text-sm text-[#1d2129]">
                 {/* {queryType === QueryType.CUSTOMER ? '客户简称' : '订单ID'} */}
                 订单号，例如：IN20240404
@@ -502,6 +498,7 @@ const FieldAutoComplete = () => {
         </div>
 
         {/* 字段选择 */}
+        {/* <div className="text-sm text-gray-500 mb-2">将以下勾选的字段数据同步到表格中</div> */}
         <FieldsSection
           fields={fields}
           onFieldChange={handleFieldChange}
