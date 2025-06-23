@@ -21,7 +21,7 @@ const PluginLayout: React.FC<PluginLayoutProps> = ({ children }) => {
 
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto px-4">
+      <main className="flex-1 overflow-y-auto px-2 sm:px-3 md:px-4">
         <div className="mx-auto max-w-5xl">
           {children}
         </div>

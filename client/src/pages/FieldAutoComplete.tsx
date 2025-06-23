@@ -1,14 +1,12 @@
-import ActionButtons from "@/components/ActionButtons";
-import CompletableFields from "@/components/CompletableFields";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { useFeishuBase } from "@/hooks/use-feishu-base";
 import { useToast } from "@/hooks/use-toast";
 import { apiService } from "@/lib/apiService";
 import { autoCompleteFields } from "@/lib/autoCompleteHelper";
 import { Field, QueryType } from "@/lib/dataSync";
+import { cn } from "@/lib/utils";
 import { bitable } from "@lark-base-open/js-sdk";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { BookText } from "lucide-react";
 import { useEffect, useState } from "react";
 import AutoCompleteProgress from "./AutoCompleteProgress";
 import AutoCompleteResult from "./AutoCompleteResult";
@@ -16,7 +14,7 @@ import AutoCompleteResult from "./AutoCompleteResult";
 type PageState = 'form' | 'progress' | 'result';
 
 interface CompletionResult {
-  status: 'success' | 'partial' | 'failed' | 'no_permission';
+  status: 'success' | 'partial' | 'failed' | 'no_permission' | 'noChange';
   successCount: number;
   errorCount: number;
   unchangedCount: number;
@@ -104,15 +102,137 @@ function getFieldsByQueryType(fields: Field[], queryType: QueryType): Field[] {
   });
 }
 
+// 自定义Select组件以匹配Figma设计
+const CustomSelect: React.FC<{
+  value: string;
+  onValueChange: (value: string) => void;
+  placeholder?: string;
+  options: { value: string; label: string }[];
+  className?: string;
+}> = ({ value, onValueChange, placeholder, options, className }) => {
+
+  const selectedOption = options.find(opt => opt.value === value);
+
+  return (
+    <Select value={value} onValueChange={onValueChange}>
+      <SelectTrigger className={cn(
+        "bg-[#f2f3f5] border-0 h-[30px] px-3 py-1 rounded-sm",
+        "focus:ring-0 focus:ring-offset-0 hover:bg-[#e8e9eb]",
+        className
+      )}>
+        <span className={cn(
+          "text-sm font-normal",
+          selectedOption ? "text-[#1d2129]" : "text-[#c9cdd4]"
+        )}>
+          {selectedOption?.label || placeholder}
+        </span>
+      </SelectTrigger>
+      <SelectContent>
+        {options.map(option => (
+          <SelectItem key={option.value} value={option.value}>
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+};
+
+// 自定义Checkbox组件
+const CustomCheckbox: React.FC<{
+  id?: string;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+  disabled?: boolean;
+  indeterminate?: boolean;
+}> = ({ id, checked, onCheckedChange, disabled, indeterminate }) => {
+  return (
+    <button
+      id={id}
+      type="button"
+      role="checkbox"
+      aria-checked={indeterminate ? "mixed" : checked}
+      disabled={disabled}
+      onClick={() => !disabled && onCheckedChange(!checked)}
+      className={cn(
+        "h-3.5 w-3.5 rounded-sm relative flex items-center justify-center transition-colors shrink-0",
+        "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        !checked && "bg-white border-2 border-[#e5e6eb]",
+        checked && !disabled && "bg-[#165dff] border-0",
+        checked && disabled && "bg-[#c9cdd4] border-0",
+        disabled && "cursor-not-allowed"
+      )}
+    >
+      {checked && !indeterminate && (
+        <svg className="h-2.5 w-2.5" viewBox="0 0 10 10" fill="none">
+          <path
+            d="M8.5 2.5L3.5 7.5L1.5 5.5"
+            stroke="white"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      )}
+      {indeterminate && (
+        <div className="h-0.5 w-1.5 bg-white rounded-[0.5px]" />
+      )}
+    </button>
+  );
+};
+
+// 字段标签组件
+const FieldTag: React.FC<{ type: string }> = ({ type }) => {
+  // 根据字段类型确定标签样式
+  const getTagStyle = () => {
+    if (type === 'customer') {
+      return { bg: 'bg-[#e8fffb]', text: 'text-[#0fc6c2]', label: '客户' };
+    } else if (type === 'order') {
+      return { bg: 'bg-[#e8f3ff]', text: 'text-[#165dff]', label: '订单' };
+    } else {
+      return { bg: 'bg-[#f5e8ff]', text: 'text-[#722ed1]', label: '通用' };
+    }
+  };
+
+  const style = getTagStyle();
+  return (
+    <div className={cn('px-2 h-5 flex items-center rounded-sm text-xs', style.bg)}>
+      <span className={style.text}>{style.label}</span>
+    </div>
+  );
+};
+
+// 字段项组件
+const FieldItem: React.FC<{
+  field: Field;
+  isChecked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+}> = ({ field, isChecked, onCheckedChange }) => {
+  return (
+    <div className="flex items-center justify-between pr-2">
+      <div className="flex items-center gap-2">
+        <CustomCheckbox
+          id={field.name}
+          checked={isChecked}
+          onCheckedChange={onCheckedChange}
+        />
+        <label
+          htmlFor={field.name}
+          className="text-sm leading-[22px] select-none text-[#1d2129] cursor-pointer"
+        >
+          {field.mapping_field}
+        </label>
+        <FieldTag type={field.query_type || 'both'} />
+      </div>
+    </div>
+  );
+};
+
 const FieldAutoComplete = () => {
   const { toast } = useToast();
   const {
-    recordFields,
     selection,
-    refreshSelection,
-    selectedCellValue,
     loading: feishuLoading,
-    activeTable
   } = useFeishuBase();
 
   const [pageState, setPageState] = useState<PageState>('form');
@@ -287,15 +407,7 @@ const FieldAutoComplete = () => {
     };
   }, []);
 
-  // Handle toggling mapping active state
-  const handleToggleMapping = (id: number, isActive: boolean) => {
 
-  };
-
-  const handleCancel = () => {
-    setSearchQuery("");
-    setSearchPerformed(false);
-  };
 
   const handleApply = async () => {
     try {
@@ -365,7 +477,6 @@ const FieldAutoComplete = () => {
   if (pageState === 'result' && completionResult) {
     return (
       <AutoCompleteResult
-        status={completionResult.status}
         successCount={completionResult.successCount}
         errorCount={completionResult.errorCount}
         unchangedCount={completionResult.unchangedCount}
@@ -385,67 +496,135 @@ const FieldAutoComplete = () => {
     );
   }
 
-  // 默认表单页面
+  // 默认表单页面 - 使用新的 UI 组件
   return (
-    <>
-      <div className="p-4">
+    <div className="w-full h-full bg-white flex flex-col">
+      {/* 内容区域 */}
+      <div className="flex-1 flex flex-col px-3 sm:px-4 md:px-5 py-4 gap-4 overflow-y-auto">
+        {/* 条件设置区域 */}
+        <div className="flex flex-col gap-2.5">
+          <div className="flex items-center gap-[5px] flex-wrap">
+            <span className="text-sm font-medium text-[#1d2129]">当</span>
 
-        {/* Table Name Section */}
-        <div className="mb-4">
-          <label className="block text-base font-semibold mb-1">补全的数据表</label>
-          <div className="relative">
-            <BookText className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
             <input
               type="text"
-              className="w-full pl-10 pr-3 py-2 border rounded bg-gray-100 text-base"
+              className="bg-[#f2f3f5] border-0 h-[30px] px-3 py-1 rounded-sm flex-1 min-w-[120px] max-w-[173px] text-sm text-[#1d2129]"
               value={tableName || '未获取到表格名称'}
               disabled
               readOnly
             />
+
+            <span className="text-sm font-medium text-[#1d2129]">中的</span>
+
+            <CustomSelect
+              value={queryType}
+              onValueChange={(value) => setQueryType(value as QueryType)}
+              placeholder="选择查询类型"
+              options={QUERY_TYPE_OPTIONS}
+              className="w-[90px] sm:w-[100px] md:w-[103px]"
+            />
+
+            <span className="text-sm font-medium text-[#1d2129]">字段</span>
+          </div>
+
+          <div className="flex items-center gap-[5px] flex-wrap">
+            <span className="text-sm font-medium text-[#1d2129]">内容是</span>
+
+            <div className="bg-[#f2f3f5] h-[30px] px-3 py-1 rounded-sm flex-1 min-w-[150px] max-w-[221px] flex items-center">
+              <span className="text-sm text-[#1d2129]">
+                {queryType === QueryType.CUSTOMER ? '客户简称' : '订单ID'}
+              </span>
+            </div>
+
+            <span className="text-base font-medium text-[#1d2129]">时，</span>
           </div>
         </div>
 
-        {/* Query Type Selection Section */}
-        <div className="mb-6">
-          <div className="mb-1 flex items-center">
-            <span className="text-base text-foreground font-medium">选择补全依据并在数据表第一列填充对应数据</span>
+        {/* 字段选择区域 */}
+        <div className="flex flex-col gap-2.5 flex-1 min-h-0">
+          <p className="text-sm font-medium text-[#1d2129]">
+            将以下勾选的字段数据同步到表格中
+          </p>
+
+          <div className="bg-[#f7f8fa] rounded-[3px] p-2 sm:p-[10px] flex-1 min-h-[300px]">
+            <div className="flex flex-col gap-2.5 h-full overflow-y-auto">
+              {/* 全选 */}
+              <div className="flex items-center gap-2">
+                <CustomCheckbox
+                  id="select-all"
+                  checked={selectedFields.length === filteredFields.length && filteredFields.length > 0}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      setSelectedFields([...filteredFields]);
+                    } else {
+                      setSelectedFields([]);
+                    }
+                  }}
+                  indeterminate={selectedFields.length > 0 && selectedFields.length < filteredFields.length}
+                />
+                <label htmlFor="select-all" className="text-sm font-medium text-[#1d2129] cursor-pointer select-none">
+                  全选
+                </label>
+              </div>
+
+              {/* 分隔线 */}
+              <div className="h-px bg-[#e5e6eb] -mx-2 sm:-mx-[10px]" />
+
+              {/* 字段列表 */}
+              <div className="flex flex-col gap-2.5">
+                {configLoading ? (
+                  <div className="text-center py-4">
+                    <div className="text-sm text-[#86909C]">正在加载字段配置...</div>
+                  </div>
+                ) : filteredFields.length === 0 ? (
+                  <div className="text-center py-4">
+                    <div className="text-sm text-[#86909C]">暂无可用字段</div>
+                  </div>
+                ) : (
+                  filteredFields.map((field) => (
+                    <FieldItem
+                      key={`${field.name}-${field.mapping_field}`}
+                      field={field}
+                      isChecked={selectedFields.some(
+                        sf => sf.name === field.name && sf.mapping_field === field.mapping_field
+                      )}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedFields([...selectedFields, field]);
+                        } else {
+                          setSelectedFields(selectedFields.filter(
+                            sf => !(sf.name === field.name && sf.mapping_field === field.mapping_field)
+                          ));
+                        }
+                      }}
+                    />
+                  ))
+                )}
+              </div>
+            </div>
           </div>
-          <Select value={queryType} onValueChange={(value) => setQueryType(value as QueryType)}>
-            <SelectTrigger className="w-full text-sm bg-white">
-              <SelectValue placeholder="选择查询类型" />
-            </SelectTrigger>
-            <SelectContent>
-              {QUERY_TYPE_OPTIONS.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </div>
-
-
-        <CompletableFields
-          fields={filteredFields}
-          selectedFields={selectedFields}
-          onSelectionChange={setSelectedFields}
-        />
       </div>
 
-      {/* Footer */}
-      <footer className="px-4 py-3 border-t border-[#E5E6EB]">
-        <div className="text-sm text-blue-600 mb-3 text-center">
-          仅支持补全当前数据表中本人有编辑权限的数据
-        </div>
-        <ActionButtons
-          onCancel={handleCancel}
-          onApply={handleApply}
-        // isLoading={isUpdating}
-        />
-      </footer>
-
-
-    </>
+      {/* 底部区域 */}
+      <div className="bg-white border-t border-[#e5e6eb] px-3 sm:px-4 md:px-5 py-2.5 flex flex-col gap-1">
+        <p className="text-xs text-[#000000] leading-[22px]">
+          请注意检查你有表格编辑权限
+        </p>
+        <button
+          onClick={handleApply}
+          disabled={selectedFields.length === 0}
+          className={cn(
+            "w-full h-8 text-white text-sm font-medium rounded-sm transition-colors flex items-center justify-center",
+            selectedFields.length === 0
+              ? "bg-[#c9cdd4] cursor-not-allowed"
+              : "bg-[#165dff] hover:bg-[#4080ff]"
+          )}
+        >
+          同步数据
+        </button>
+      </div>
+    </div>
   );
 };
 
