@@ -114,7 +114,7 @@ export async function getDataByIds(id_list: string[]): Promise<MockGetDataByIdsR
 
   // 构建查询参数，每个ID作为一个单独的 id_list 参数
   const queryParams = id_list.map(id => `id_list=${encodeURIComponent(id)}`).join('&');
-  const url = `https://219.146.148.108:8011/prod-api/external/order/orderDataCompletion?${queryParams}`;
+  const url = `https://api.intcomedical.com:8011/prod-api/external/order/orderDataCompletion?${queryParams}`;
 
   try {
     const res = await fetch(
