@@ -8,10 +8,11 @@ import FieldCompleteV2 from "@/pages/FieldCompleteV2";
 import NotFound from "@/pages/not-found";
 import PermissionManager from "@/pages/PermissionManager";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { Route, Switch, useLocation } from "wouter";
+import { Route, Router, Switch, useLocation } from "wouter";
+import { useHashLocation } from "wouter/use-hash-location";
 import { queryClient } from "./lib/queryClient";
 
-function Router() {
+function AppRouter() {
   const [location] = useLocation();
 
   return (
@@ -52,7 +53,9 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
-        <Router />
+        <Router hook={useHashLocation}>
+          <AppRouter />
+        </Router>
       </TooltipProvider>
     </QueryClientProvider>
   );
