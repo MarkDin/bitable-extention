@@ -1,5 +1,4 @@
 {
-
     "field_list": [
         {
             "name": "accountName",
@@ -9,5 +8,32 @@
             "name": "entityType-label",
             "mapping_field": "客户类型"
         }
-    ]
+    ],
+    "app_id": "cli_a7103bb9e9bb900c",
+    "app_secret": "D2wxKMiZq2CfcWoR3nk6De1YJWKKzZei",
+    "dev_mode": true,
+    "feishu": {
+        "webhook_url": "https://open.feishu.cn/open-apis/bot/v2/hook/5b3ac02c-c18f-4263-af51-abaf655dbbac",
+        "card_template": {
+            "template_id": "AAqyBQVmUNxxx",
+            "template_version_name": "1.0.0",
+            "description": "操作日志卡片模板，需要在飞书开放平台搭建工具中创建",
+            "variables": {
+                "field_list": "field_list",
+                "complete_row_count": "complete_row_count",
+                "start_time": "start_time",
+                "end_time": "end_time",
+                "complete_result": "complete_result",
+                "doc_link": "doc_link"
+            },
+            "api_variables": {
+                "field_list": "var_mciwqaaq",
+                "complete_row_count": "var_mciwqaat",
+                "start_time": "var_mciwqaca",
+                "end_time": "var_mciwqaci",
+                "complete_result": "var_mciwqael",
+                "doc_link": "var_mciwqajb"
+            }
+        }
+    }
 }

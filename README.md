@@ -10,6 +10,7 @@
 - **数据差异高亮**: 在更新数据时提供视觉指示
 - **用户信息展示**: 显示当前用户 ID 及相关信息
 - **本地数据存储**: 使用飞书插件存储 API 保存配置数据
+- **操作日志功能**: 记录每次补全操作的详细信息
 
 ## 安装和运行
 
@@ -117,3 +118,143 @@ yarn dev:host
 - **数据存储**: 使用 bitable.bridge.setData/getData 操作插件数据
 
 更多详细信息，请参考飞书开发者文档和 attached_assets 目录下的 SDK 参考文档。
+
+## 操作日志功能
+
+插件会自动记录每次补全操作的详细信息，包括：
+
+### 记录的信息
+1. **补全提交时间** - 操作开始的时间戳
+2. **补全结束时间** - 操作完成的时间戳  
+3. **补全字段列表** - 用户勾选的字段名称
+4. **补全行数** - 处理的总记录数
+5. **补全结果** - 成功、失败、未变更的统计
+6. **多维表格链接** - 操作的表格直链
+
+### 日志存储
+- 本地存储：保存在浏览器 localStorage 中，最多保留 50 条记录
+- 飞书通知：自动发送操作结果卡片到配置的飞书群聊
+
+### 使用示例
+
+```typescript
+import { autoCompleteFields, OperationLog } from '@/lib/autoCompleteHelper';
+
+// 调用自动补全功能
+await autoCompleteFields({
+  toast,
+  selectedFields,
+  queryFieldId: 'field_id_123',
+  onProgress: (completed, total) => {
+    console.log(`进度: ${completed}/${total}`);
+  },
+  onComplete: (result) => {
+    console.log('补全完成:', result);
+  },
+  onOperationLog: (log: OperationLog) => {
+    // 处理操作日志
+    console.log('操作日志:', log);
+    
+    // 示例日志格式：
+    // {
+    //   submitTime: "2024-01-15T10:30:00.000Z",
+    //   endTime: "2024-01-15T10:32:15.000Z", 
+    //   selectedFields: ["客户简称", "订单金额", "交期"],
+    //   totalRows: 100,
+    //   completionResult: {
+    //     status: "success",
+    //     successCount: 95,
+    //     errorCount: 2,
+    //     unchangedCount: 3
+    //   },
+    //   bitableUrl: "https://bytedance.feishu.cn/base/...",
+    //   tableName: "订单管理表",
+    //   tableId: "tblxxx"
+    // }
+  }
+});
+```
+
+### 飞书卡片通知
+
+操作完成后，会自动发送包含以下信息的卡片到飞书群聊：
+
+- 📊 表格名称和处理行数
+- ⏱️ 操作耗时
+- 📅 完成时间  
+- 📋 详细的结果统计（成功/失败/无变化行数）
+- 🎯 成功率百分比
+- 🔧 补全的字段列表
+- 🔗 直达表格的链接按钮
+
+## 开发指南
+
+### 环境要求
+- Node.js 16+
+- 飞书多维表格插件环境
+
+### 安装依赖
+```bash
+npm install
+```
+
+### 开发调试
+```bash
+npm run dev
+```
+
+### 构建发布
+```bash
+npm run build
+```
+
+## 配置说明
+
+### 飞书 Webhook 和卡片模板配置
+
+#### 1. Webhook 配置
+在 `client/src/lib/sendLarkMessage.ts` 中配置你的飞书机器人 Webhook 地址：
+
+```typescript
+const sendUrl = 'https://open.feishu.cn/open-apis/bot/v2/hook/your-webhook-id'
+```
+
+#### 2. 卡片模板配置
+操作日志使用飞书卡片模板功能，需要先在飞书开放平台创建模板：
+
+```typescript
+const CARD_TEMPLATE_CONFIG = {
+  template_id: 'YOUR_TEMPLATE_ID',        // 替换为实际的模板ID
+  template_version_name: 'YOUR_VERSION'   // 替换为实际的版本号
+};
+```
+
+**详细配置步骤请参考：[飞书卡片模板配置指南](./FEISHU_CARD_TEMPLATE_SETUP.md)**
+
+#### 3. 模板变量说明
+卡片模板需要包含以下变量：
+
+| 变量名称 | API名称 | 类型 | 描述 |
+|---------|---------|------|------|
+| field_list | var_mciwqaaq | text | 补全的字段列表 |
+| complete_row_count | var_mciwqaat | integer | 补全行数 |
+| start_time | var_mciwqaca | text | 开始时间 |
+| end_time | var_mciwqaci | text | 结束时间 |
+| complete_result | var_mciwqael | text | 补全结果 |
+| doc_link | var_mciwqajb | text | 表格链接 |
+
+**注意：** 在代码中使用变量名称（如 `field_list`），而不是API名称（如 `var_mciwqaaq`）。
+
+### 字段映射配置
+字段映射关系存储在多维表格的配置中，支持动态配置和默认配置fallback。
+
+## 注意事项
+
+1. 确保飞书多维表格有编辑权限
+2. 操作日志包含敏感信息，请谨慎配置 Webhook 地址
+3. 本地日志会占用浏览器存储空间，自动清理超过50条的旧记录
+4. 大量数据补全时请耐心等待，不要关闭插件页面
+
+## 许可证
+
+MIT License

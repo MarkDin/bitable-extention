@@ -3,6 +3,23 @@ import { Field } from "@/types/common";
 import type { IDateTimeField, ITable } from "@lark-base-open/js-sdk";
 import { bitable, FieldType as BitableFieldType, DateFormatter } from "@lark-base-open/js-sdk";
 
+// 操作日志接口定义 - 导出以便其他文件使用
+export interface OperationLog {
+  submitTime: string;           // 补全提交时间
+  endTime: string;             // 补全结束时间
+  selectedFields: string[];    // 补全了哪些字段（勾选的字段名称）
+  totalRows: number;           // 补全的行数
+  completionResult: {          // 补全结果
+    status: 'success' | 'partial' | 'failed' | 'no_permission' | 'noChange';
+    successCount: number;
+    errorCount: number;
+    unchangedCount: number;
+  };
+  bitableUrl: string;          // 补全的多维表格的链接
+  tableName: string;           // 表格名称
+  tableId: string;             // 表格ID
+}
+
 interface AutoCompleteParams {
   toast: (args: any) => void;
   selectedFields: Field[];
@@ -14,6 +31,7 @@ interface AutoCompleteParams {
     errorCount: number;
     unchangedCount: number;
   }) => void;
+  onOperationLog?: (log: OperationLog) => void; // 新增：操作日志回调
 }
 
 interface RecordStatus {
@@ -30,7 +48,14 @@ interface BatchRecordUpdate {
 }
 
 export async function autoCompleteFields(params: AutoCompleteParams) {
-  const { toast, selectedFields, queryFieldId, onProgress, onComplete } = params;
+  const { toast, selectedFields, queryFieldId, onProgress, onComplete, onOperationLog } = params;
+
+  // 记录开始时间
+  const submitTime = new Date().toISOString();
+  let operationLog: Partial<OperationLog> = {
+    submitTime,
+    selectedFields: selectedFields.map(f => f.name), // 记录选中的字段名称
+  };
 
   try {
     console.log('[AutoComplete] 开始自动补全流程');
@@ -41,18 +66,60 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
       throw new Error('无法获取当前数据表');
     }
 
+    // 获取表格基本信息
+    const tableMeta = await activeTable.getMeta();
+    const selection = await bitable.base.getSelection();
+
+    // 生成多维表格链接
+    let bitableUrl = '';
+    try {
+      if (selection.tableId && selection.viewId) {
+        bitableUrl = await bitable.bridge.getBitableUrl({
+          tableId: selection.tableId,
+          viewId: selection.viewId,
+          recordId: selection.recordId,
+          fieldId: selection.fieldId
+        });
+      }
+    } catch (error) {
+      console.warn('[AutoComplete] 获取多维表格链接失败:', error);
+      bitableUrl = '获取链接失败';
+    }
+
+    // 更新操作日志
+    operationLog = {
+      ...operationLog,
+      tableName: tableMeta.name,
+      tableId: tableMeta.id,
+      bitableUrl
+    };
+
     // 获取所有记录
     const recordIdList = await activeTable.getRecordIdList();
     console.log(`[AutoComplete] 获取到 ${recordIdList.length} 条记录`);
 
+    // 更新总行数
+    operationLog.totalRows = recordIdList.length;
+
     if (recordIdList.length === 0) {
       toast({ title: '当前数据表中没有记录', variant: 'warning' });
-      onComplete?.({
-        status: 'success',
+      const endTime = new Date().toISOString();
+      const result = {
+        status: 'success' as const,
         successCount: 0,
         errorCount: 0,
         unchangedCount: 0
-      });
+      };
+
+      // 完成操作日志
+      const finalLog: OperationLog = {
+        ...operationLog,
+        endTime,
+        completionResult: result
+      } as OperationLog;
+
+      onComplete?.(result);
+      onOperationLog?.(finalLog);
       return;
     }
 
@@ -76,12 +143,24 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
       } catch (error) {
         console.warn(`[AutoComplete] 新建字段 ${field.name} 失败:`, error);
         toast({ title: `新建字段 ${field.name} 失败`, description: '可能无表格编辑权限', variant: 'destructive' });
-        onComplete?.({
-          status: 'no_permission',
+
+        const endTime = new Date().toISOString();
+        const result = {
+          status: 'no_permission' as const,
           successCount: 0,
           errorCount: 0,
           unchangedCount: 0
-        });
+        };
+
+        // 完成操作日志
+        const finalLog: OperationLog = {
+          ...operationLog,
+          endTime,
+          completionResult: result
+        } as OperationLog;
+
+        onComplete?.(result);
+        onOperationLog?.(finalLog);
         return;
       }
     }
@@ -113,12 +192,23 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
 
     if (queryValues.length === 0) {
       toast({ title: '没有找到可用于查询的数据', variant: 'warning' });
-      onComplete?.({
-        status: 'success',
+      const endTime = new Date().toISOString();
+      const result = {
+        status: 'success' as const,
         successCount: 0,
         errorCount: 0,
         unchangedCount: recordIdList.length
-      });
+      };
+
+      // 完成操作日志
+      const finalLog: OperationLog = {
+        ...operationLog,
+        endTime,
+        completionResult: result
+      } as OperationLog;
+
+      onComplete?.(result);
+      onOperationLog?.(finalLog);
       return;
     }
 
@@ -278,12 +368,25 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
       overallStatus = 'failed';
     }
 
-    onComplete?.({
+    const result = {
       status: overallStatus,
       successCount,
       errorCount,
       unchangedCount
-    });
+    };
+
+    // 记录结束时间并完成操作日志
+    const endTime = new Date().toISOString();
+    const finalLog: OperationLog = {
+      ...operationLog,
+      endTime,
+      completionResult: result
+    } as OperationLog;
+
+    console.log('[AutoComplete] 操作日志:', finalLog);
+
+    onComplete?.(result);
+    onOperationLog?.(finalLog);
 
     // 在流程最后，若有未获取到的字段，统一展示报错
     if (missingFieldValues.length > 0) {
@@ -294,12 +397,23 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
     console.error('[AutoComplete] 自动补全过程中发生错误:', error);
     toast({ title: '自动补全失败', description: error instanceof Error ? error.message : '未知错误', variant: 'destructive' });
 
-    onComplete?.({
-      status: 'failed',
+    const endTime = new Date().toISOString();
+    const result = {
+      status: 'failed' as const,
       successCount: 0,
       errorCount: 1,
       unchangedCount: 0
-    });
+    };
+
+    // 完成操作日志
+    const finalLog: OperationLog = {
+      ...operationLog,
+      endTime,
+      completionResult: result
+    } as OperationLog;
+
+    onComplete?.(result);
+    onOperationLog?.(finalLog);
   }
 }
 

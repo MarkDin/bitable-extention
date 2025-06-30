@@ -1,6 +1,6 @@
 ---
-description:
-globs:
+description: 
+globs: 
 alwaysApply: false
 ---
 # React TypeScript 最佳实践
@@ -44,7 +44,7 @@ export default function ComponentName({ prop1, prop2 }: ComponentProps) {
 ## UI 组件使用
 
 ### shadcn/ui 组件
-项目使用 shadcn/ui 组件库，组件位于 [client/src/components/ui/](mdc:client/src/components/ui/)：
+项目使用 shadcn/ui 组件库，组件位于 [client/src/components/ui/](mdc:client/src/components/ui)：
 - Button, Input, Select, Checkbox 等基础组件
 - Toast 用于消息提示
 - 保持组件 API 一致性

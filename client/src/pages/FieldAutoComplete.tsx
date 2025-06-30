@@ -407,6 +407,14 @@ const FieldAutoComplete = () => {
         onComplete: (result) => {
           setCompletionResult(result);
           setPageState('result');
+        },
+        onOperationLog: (log) => {
+          // 处理操作日志
+          console.log('[FieldAutoComplete] 收到操作日志:', log);
+
+          // 这里可以将日志发送到服务器或存储到本地
+          // 例如：调用飞书 webhook 发送卡片
+          handleOperationLog(log);
         }
       });
     } catch (e: any) {
@@ -418,6 +426,43 @@ const FieldAutoComplete = () => {
       });
       // 如果出现异常，回到表单页面
       setPageState('form');
+    }
+  };
+
+  // 处理操作日志的函数
+  const handleOperationLog = async (log: any) => {
+    try {
+      // 保存到本地存储
+      const logs = JSON.parse(localStorage.getItem('auto_complete_logs') || '[]');
+      logs.push(log);
+      // 只保留最近 50 条日志
+      if (logs.length > 50) {
+        logs.splice(0, logs.length - 50);
+      }
+      localStorage.setItem('auto_complete_logs', JSON.stringify(logs));
+
+      console.log('[FieldAutoComplete] 操作日志已保存:', log);
+
+      // 发送到飞书 webhook
+      try {
+        const { sendOperationLogToFeishu } = await import('@/lib/sendLarkMessage');
+        const success = await sendOperationLogToFeishu(log);
+        if (success) {
+          console.log('[FieldAutoComplete] 操作日志已发送到飞书');
+          toast({
+            title: "操作日志已发送",
+            description: "补全结果已发送到飞书群聊",
+            variant: "default"
+          });
+        } else {
+          console.warn('[FieldAutoComplete] 发送到飞书失败');
+        }
+      } catch (error) {
+        console.error('[FieldAutoComplete] 发送到飞书失败:', error);
+      }
+
+    } catch (error) {
+      console.error('[FieldAutoComplete] 保存操作日志失败:', error);
     }
   };
 
