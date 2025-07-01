@@ -1,7 +1,7 @@
 import { getDataByIds, MockGetDataByIdsResult } from "@/lib/dataSync";
 import { ensureFieldsExist, FieldCreationConfig, formatFieldCreationResults } from "@/lib/fieldManager";
 import { Field } from "@/types/common";
-import type { ITable } from "@lark-base-open/js-sdk";
+import type { ITable, IOpenCellValue } from "@lark-base-open/js-sdk";
 import { bitable, FieldType as BitableFieldType } from "@lark-base-open/js-sdk";
 
 // 操作日志接口定义 - 导出以便其他文件使用
@@ -39,7 +39,7 @@ interface AutoCompleteParams {
 
 interface RecordStatus {
   recordId: string;
-  status: 'success' | 'error' | 'unchanged';
+  status: 'success' | 'error' | 'unchanged' | 'warning'; // 状态：成功、错误、未改变、警告
   errorMessage?: string;
   changedFields?: string[];
 }
@@ -190,14 +190,13 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
     const allFields = await activeTable.getFieldMetaList();
     // allFields 中的name是多维表格中的表头，一般是中文，mapping_field是字段名，是英文名
     const fieldNameToId = Object.fromEntries(allFields.map(f => [f.name, f.id]));
-    console.log(`[AutoComplete] 建立字段名到ID的映射:`, fieldNameToId);
     // 收集所有需要查询的值
     const queryValues: string[] = [];
     const recordQueryMap = new Map<string, string>();
 
     for (const recordId of recordIdList) {
       try {
-        const queryValue = await activeTable.getCellValue(queryFieldId, recordId);
+        const queryValue : IOpenCellValue = await activeTable.getCellValue(queryFieldId, recordId);
         if (queryValue && queryValue.length > 0) {
           console.log(`[AutoComplete] 获取到记录 ${recordId} 的查询字段值:`, queryValue);
           const trimmedValue = queryValue[0].text.trim();
@@ -342,27 +341,48 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
 
     // 执行批量更新
     if (batchUpdates.length > 0) {
-      try {
-        // 使用 setRecords 方法批量更新多行记录
-        await activeTable.setRecords(batchUpdates);
-        console.log(`[AutoComplete] 成功批量更新 ${batchUpdates.length} 条记录`);
+      const batchSize = 50;
+      const totalBatches = Math.ceil(batchUpdates.length / batchSize);
+      let completedBatches = 0;
+      let totalUpdated = 0;
+      const batchErrors: string[] = [];
 
-        // 更新进度
-        onProgress?.(batchUpdates.length, queryValues.length);
+      for (let i = 0; i < totalBatches; i++) {
+        const startIndex = i * batchSize;
+        const endIndex = Math.min((i + 1) * batchSize, batchUpdates.length);
+        const currentBatch = batchUpdates.slice(startIndex, endIndex);
 
-        toast({ title: `成功更新 ${batchUpdates.length} 条记录`, type: 'success' });
-      } catch (error) {
-        console.error('[AutoComplete] 批量更新失败:', error);
+        try {
+          // 使用 setRecords 方法批量更新当前批次记录
+          await activeTable.setRecords(currentBatch);
+          completedBatches++;
+          totalUpdated += currentBatch.length;
+          console.log(`[AutoComplete] 成功批量更新第 ${i + 1}/${totalBatches} 批次，共 ${currentBatch.length} 条记录`);
 
-        // 如果批量更新失败，标记所有记录为错误状态
-        for (const status of recordStatuses) {
-          if (status.status === 'success') {
-            status.status = 'error';
-            status.errorMessage = error instanceof Error ? error.message : '批量更新失败';
+          // 更新进度
+          onProgress?.(totalUpdated, queryValues.length);
+
+          toast({ title: `成功更新第 ${i + 1}/${totalBatches} 批次`, description: `已更新 ${totalUpdated}/${batchUpdates.length} 条记录`, type: 'success' });
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : '批量更新失败';
+          console.error(`[AutoComplete] 第 ${i + 1}/${totalBatches} 批次更新失败:`, errorMsg);
+          batchErrors.push(`第 ${i + 1} 批次: ${errorMsg}`);
+
+          // 标记当前批次中的记录为错误状态
+          for (const update of currentBatch) {
+            const status = recordStatuses.find(s => s.recordId === update.recordId);
+            if (status && status.status === 'success') {
+              status.status = 'error';
+              status.errorMessage = errorMsg;
+            }
           }
         }
+      }
 
-        toast({ title: '批量更新失败', description: error instanceof Error ? error.message : '未知错误', variant: 'destructive' });
+      if (batchErrors.length > 0) {
+        toast({ title: `部分批次更新失败`, description: `共 ${batchErrors.length}/${totalBatches} 批次失败`, variant: 'destructive' });
+      } else if (completedBatches > 0) {
+        toast({ title: `全部批次更新完成`, description: `成功更新 ${totalUpdated} 条记录`, type: 'success' });
       }
     }
 

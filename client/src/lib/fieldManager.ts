@@ -84,6 +84,24 @@ export async function createSingleField(
         } catch (error) {
             lastError = error instanceof Error ? error.message : '未知错误';
             console.warn(`[FieldManager] 创建字段 ${field.name} 失败，第 ${attempt} 次尝试:`, error);
+            if (error instanceof Error && error.message.includes('permission')) {
+                console.error(`[FieldManager] 权限不足，无法创建字段 ${field.name}`);
+                return {
+                    success: false,
+                    fieldName: field.name,
+                    error: '权限不足',
+                    retryAttempts: attempt
+                };
+            }
+            // 检查是否是重复字段错误 这种可能是误报
+            if (error instanceof Error && error.message.includes('repeated error')) {
+                return {
+                    success: true,
+                    fieldName: field.name,
+                    retryAttempts: attempt
+                };
+            }
+            
 
             // 如果还有重试机会，等待后继续
             if (attempt <= maxRetries) {
