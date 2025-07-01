@@ -53,6 +53,7 @@ function validateTemplateConfig(): boolean {
  * @param log 操作日志对象
  */
 export async function sendOperationLogToFeishu(log: OperationLog): Promise<boolean> {
+    return false;
     try {
         // 验证配置
         if (!validateTemplateConfig()) {
