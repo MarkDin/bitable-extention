@@ -29,6 +29,7 @@ interface OperationLog {
         successCount: number;
         errorCount: number;
         unchangedCount: number;
+        fieldCreationErrors?: string[]; // 字段创建错误信息
     };
     bitableUrl: string;
     tableName: string;
@@ -75,20 +76,34 @@ export async function sendOperationLogToFeishu(log: OperationLog): Promise<boole
 
         // 根据状态确定补全结果文本
         const getCompleteResultText = (result: OperationLog['completionResult']) => {
+            let statusText = '';
             switch (result.status) {
                 case 'success':
-                    return '✅全部正确';
+                    statusText = '✅全部正确';
+                    break;
                 case 'partial':
-                    return `⚠️部分成功：成功${result.successCount}行，失败${result.errorCount}行`;
+                    statusText = `⚠️部分成功：成功${result.successCount}行，失败${result.errorCount}行`;
+                    break;
                 case 'failed':
-                    return `❌补全失败：${result.errorCount}行失败`;
+                    statusText = `❌补全失败：${result.errorCount}行失败`;
+                    break;
                 case 'no_permission':
-                    return '🔒权限不足';
+                    statusText = '🔒权限不足';
+                    break;
                 case 'noChange':
-                    return '📝无需更新';
+                    statusText = '📝无需更新';
+                    break;
                 default:
-                    return '📊处理完成';
+                    statusText = '📊处理完成';
+                    break;
             }
+
+            // 如果有字段创建错误，添加到结果文本中
+            if (result.fieldCreationErrors && result.fieldCreationErrors.length > 0) {
+                statusText += `\n🔧字段创建问题：${result.fieldCreationErrors.join('；')}`;
+            }
+
+            return statusText;
         };
 
         // 构建字段列表文本
@@ -210,7 +225,8 @@ export async function testCardTemplate(): Promise<boolean> {
             status: 'success',
             successCount: 2,
             errorCount: 0,
-            unchangedCount: 0
+            unchangedCount: 0,
+            fieldCreationErrors: [] // 测试时无字段创建错误
         },
         bitableUrl: 'https://example.com/test-table',
         tableName: '测试表格',

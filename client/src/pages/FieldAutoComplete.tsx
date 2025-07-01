@@ -20,6 +20,7 @@ interface CompletionResult {
   successCount: number;
   errorCount: number;
   unchangedCount: number;
+  fieldCreationErrors?: string[]; // 字段创建错误信息
 }
 
 
@@ -489,6 +490,7 @@ const FieldAutoComplete = () => {
         successCount={completionResult.successCount}
         errorCount={completionResult.errorCount}
         unchangedCount={completionResult.unchangedCount}
+        fieldCreationErrors={completionResult.fieldCreationErrors}
         onReturn={handleReturn}
       />
     );

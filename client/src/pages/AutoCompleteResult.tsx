@@ -7,6 +7,7 @@ interface AutoCompleteResultProps {
     successCount: number;
     errorCount: number;
     unchangedCount: number;
+    fieldCreationErrors?: string[]; // 字段创建错误信息
     onReturn: () => void;
 }
 
@@ -15,6 +16,7 @@ const AutoCompleteResult: React.FC<AutoCompleteResultProps> = ({
     successCount,
     errorCount,
     unchangedCount,
+    fieldCreationErrors = [],
     onReturn
 }) => {
     const getStatusConfig = () => {
@@ -89,6 +91,21 @@ const AutoCompleteResult: React.FC<AutoCompleteResultProps> = ({
                             {errorCount > 0 && (
                                 <div className="text-red-500 font-bold">失败: {errorCount} 条</div>
                             )}
+                        </div>
+                    )}
+
+                    {/* 字段创建错误信息 */}
+                    {fieldCreationErrors.length > 0 && (
+                        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                            <div className="text-sm font-medium text-red-800 mb-2">字段创建失败:</div>
+                            <div className="text-xs text-red-700 space-y-1">
+                                {fieldCreationErrors.map((error, index) => (
+                                    <div key={index} className="flex items-start">
+                                        <span className="text-red-500 mr-1">•</span>
+                                        <span>{error}</span>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     )}
                 </div>

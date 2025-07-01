@@ -1,7 +1,8 @@
-import { getDataByIds, getFieldTypeMapping, MockGetDataByIdsResult } from "@/lib/dataSync";
+import { getDataByIds, MockGetDataByIdsResult } from "@/lib/dataSync";
+import { ensureFieldsExist, FieldCreationConfig, formatFieldCreationResults } from "@/lib/fieldManager";
 import { Field } from "@/types/common";
-import type { IDateTimeField, ITable } from "@lark-base-open/js-sdk";
-import { bitable, FieldType as BitableFieldType, DateFormatter } from "@lark-base-open/js-sdk";
+import type { ITable } from "@lark-base-open/js-sdk";
+import { bitable, FieldType as BitableFieldType } from "@lark-base-open/js-sdk";
 
 // 操作日志接口定义 - 导出以便其他文件使用
 export interface OperationLog {
@@ -14,6 +15,7 @@ export interface OperationLog {
     successCount: number;
     errorCount: number;
     unchangedCount: number;
+    fieldCreationErrors?: string[]; // 字段创建错误信息
   };
   bitableUrl: string;          // 补全的多维表格的链接
   tableName: string;           // 表格名称
@@ -30,6 +32,7 @@ interface AutoCompleteParams {
     successCount: number;
     errorCount: number;
     unchangedCount: number;
+    fieldCreationErrors?: string[]; // 字段创建错误信息
   }) => void;
   onOperationLog?: (log: OperationLog) => void; // 新增：操作日志回调
 }
@@ -108,7 +111,8 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
         status: 'success' as const,
         successCount: 0,
         errorCount: 0,
-        unchangedCount: 0
+        unchangedCount: 0,
+        fieldCreationErrors: []
       };
 
       // 完成操作日志
@@ -123,50 +127,67 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
       return;
     }
 
-    // 1. 获取当前表格所有字段
-    let allFields = await activeTable.getFieldMetaList();
-    let existingFieldNames = allFields.map(f => f.name);
+    // 1. 检查并创建缺失的字段（带重试机制）
+    const fieldCreationConfig: FieldCreationConfig = {
+      maxRetries: 1, // 失败后重试一次
+      retryDelay: 1000, // 重试延迟1秒
+      onProgress: (fieldName: string, attempt: number) => {
+        console.log(`[AutoComplete] 正在创建字段 ${fieldName}，第 ${attempt} 次尝试`);
+      }
+    };
 
-    // 2. 找出需要新建的字段
-    const fieldsToCreate = selectedFields.filter(f => !existingFieldNames.includes(f.name));
-    console.log(`[AutoComplete] 需要新建 ${fieldsToCreate.length} 个字段`);
-    // 3. 新建缺失字段
-    for (const field of fieldsToCreate) {
-      try {
-        const fieldType = getFieldTypeMapping(field.name);
-        const newFieldMeta = await activeTable.addField({ name: field.name, type: fieldType as any });
-        if (fieldType === BitableFieldType.DateTime) {
-          console.log('newFieldMeta', newFieldMeta);
-          const newField = await activeTable.getField<IDateTimeField>(newFieldMeta);
-          await newField.setDateFormat(DateFormatter.DATE_TIME);
+    const { results, hasPermission, fieldsToCreate } = await ensureFieldsExist(
+      activeTable,
+      selectedFields,
+      fieldCreationConfig
+    );
+
+    // 2. 处理字段创建结果
+    let fieldCreationErrors: string[] = [];
+    if (results.length > 0) {
+      const { successMessage, errorMessage, hasErrors } = formatFieldCreationResults(results);
+
+      // 收集字段创建错误信息
+      fieldCreationErrors = results
+        .filter(r => !r.success)
+        .map(r => `${r.fieldName}: ${r.error || '未知错误'}`);
+
+      if (successMessage) {
+        console.log(`[AutoComplete] ${successMessage}`);
+        toast({ title: '字段创建成功', description: successMessage, variant: 'default' });
+      }
+
+      if (hasErrors) {
+        console.warn(`[AutoComplete] ${errorMessage}`);
+        toast({ title: '字段创建失败', description: errorMessage, variant: 'destructive' });
+
+        // 如果没有权限或所有字段都创建失败，直接返回
+        if (!hasPermission) {
+          const endTime = new Date().toISOString();
+          const result = {
+            status: 'no_permission' as const,
+            successCount: 0,
+            errorCount: 0,
+            unchangedCount: 0,
+            fieldCreationErrors
+          };
+
+          // 完成操作日志
+          const finalLog: OperationLog = {
+            ...operationLog,
+            endTime,
+            completionResult: result
+          } as OperationLog;
+
+          onComplete?.(result);
+          onOperationLog?.(finalLog);
+          return;
         }
-      } catch (error) {
-        console.warn(`[AutoComplete] 新建字段 ${field.name} 失败:`, error);
-        toast({ title: `新建字段 ${field.name} 失败`, description: '可能无表格编辑权限', variant: 'destructive' });
-
-        const endTime = new Date().toISOString();
-        const result = {
-          status: 'no_permission' as const,
-          successCount: 0,
-          errorCount: 0,
-          unchangedCount: 0
-        };
-
-        // 完成操作日志
-        const finalLog: OperationLog = {
-          ...operationLog,
-          endTime,
-          completionResult: result
-        } as OperationLog;
-
-        onComplete?.(result);
-        onOperationLog?.(finalLog);
-        return;
       }
     }
 
-    // 4. 新建后重新获取字段列表，建立 name->id 映射
-    allFields = await activeTable.getFieldMetaList();
+    // 3. 重新获取字段列表，建立 name->id 映射
+    const allFields = await activeTable.getFieldMetaList();
     // allFields 中的name是多维表格中的表头，一般是中文，mapping_field是字段名，是英文名
     const fieldNameToId = Object.fromEntries(allFields.map(f => [f.name, f.id]));
     console.log(`[AutoComplete] 建立字段名到ID的映射:`, fieldNameToId);
@@ -197,7 +218,8 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
         status: 'success' as const,
         successCount: 0,
         errorCount: 0,
-        unchangedCount: recordIdList.length
+        unchangedCount: recordIdList.length,
+        fieldCreationErrors: []
       };
 
       // 完成操作日志
@@ -372,7 +394,8 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
       status: overallStatus,
       successCount,
       errorCount,
-      unchangedCount
+      unchangedCount,
+      fieldCreationErrors: fieldCreationErrors.length > 0 ? fieldCreationErrors : []
     };
 
     // 记录结束时间并完成操作日志
@@ -402,7 +425,8 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
       status: 'failed' as const,
       successCount: 0,
       errorCount: 1,
-      unchangedCount: 0
+      unchangedCount: 0,
+      fieldCreationErrors: []
     };
 
     // 完成操作日志

@@ -11,6 +11,9 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Route, Router, Switch, useLocation } from "wouter";
 import { useHashLocation } from "wouter/use-hash-location";
 import { queryClient } from "./lib/queryClient";
+import { useEffect } from "react";
+import { getDataByIds } from "./lib/dataSync";
+import { toast } from "./hooks/use-toast";
 
 function AppRouter() {
   const [location] = useLocation();
@@ -49,6 +52,18 @@ function AppRouter() {
 
 function App() {
   useFeishuBase();
+  useEffect(() => {
+    getDataByIds(['IN25000734']).then(res => {
+      console.log('预检接口返回', res);
+    }).catch(err => {
+      console.log('预检接口错误', err);
+      toast({
+        title: "接口连接失败",
+        description: "无法连接到数据接口，请检查网络连接或联系管理员",
+        variant: "default",
+      });
+    });
+  }, []);
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
