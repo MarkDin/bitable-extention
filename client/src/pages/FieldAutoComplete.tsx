@@ -214,6 +214,7 @@ const FieldAutoComplete = () => {
   const [tableName, setTableName] = useState<string>("");
   const [configLoading, setConfigLoading] = useState(false);
   const [currentTable, setCurrentTable] = useState<any>(null);
+  const [tableChanged, setTableChanged] = useState(false);
 
   // 进度相关状态
   const [progressData, setProgressData] = useState({ completed: 0, total: 0 });
@@ -239,64 +240,12 @@ const FieldAutoComplete = () => {
   const isAllSelected = selectableFields.length > 0 && selectedCount === selectableFields.length;
   const isPartiallySelected = selectedCount > 0 && selectedCount < selectableFields.length;
 
-  // 获取第一列字段ID
+  // 初始化表格时的处理逻辑已合并到 handleSelectionChange 中
+  // 这里保留一个空的 useEffect 来处理 tableChanged 的依赖
   useEffect(() => {
-    const initializeTable = async () => {
-      try {
-        const table = await bitable.base.getActiveTable();
-        setCurrentTable(table);
-
-        // 获取有序的字段列表（通过视图获取）
-        const activeView = await table.getActiveView();
-        const visibleFieldIds = await activeView.getVisibleFieldIdList();
-
-        if (visibleFieldIds && visibleFieldIds.length > 0) {
-          // 第一个字段就是A列
-          const firstFieldId = visibleFieldIds[0];
-          setFirstColumnFieldId(firstFieldId);
-
-          // 获取字段名称用于日志
-          const firstField = await table.getFieldById(firstFieldId);
-          const name = await firstField.getName();
-          setFirstColumnFieldName(name);
-          console.log('[FieldAutoComplete] A列字段ID:', firstFieldId, '字段名称:', name);
-        }
-
-        // 获取所有字段名称
-        const allFields = await table.getFieldList();
-        const fieldNames = new Set<string>();
-
-        for (const field of allFields) {
-          const fieldName = await field.getName();
-          fieldNames.add(fieldName);
-        }
-
-        console.log('[FieldAutoComplete] 表格现有字段:', Array.from(fieldNames));
-
-        // 更新fields状态，将已存在的字段设置为选中且禁用
-        setFields(prevFields =>
-          prevFields.map(field => {
-            const isExistingField = fieldNames.has(field.name);
-            return {
-              ...field,
-              isChecked: isExistingField ? true : field.isChecked,
-              isDisabled: isExistingField,
-              helperText: isExistingField ? '数据表已有字段默认选中' : undefined
-            };
-          })
-        );
-      } catch (error) {
-        console.error('[FieldAutoComplete] 初始化表格失败:', error);
-        toast({
-          variant: "destructive",
-          title: "错误",
-          description: "初始化表格失败",
-        });
-      }
-    };
-
-    initializeTable();
-  }, [toast]);
+    // tableChanged 状态变化时不需要额外处理，
+    // 因为 handleSelectionChange 已经处理了所有逻辑
+  }, [toast, tableChanged]);
 
 
   // 直接从apiService获取字段映射
@@ -325,6 +274,23 @@ const FieldAutoComplete = () => {
         if (table && typeof table.getName === "function") {
           const name = await table.getName();
           setTableName(name);
+          setCurrentTable(table);
+
+          // 获取有序的字段列表（通过视图获取）- 更新第一列字段信息
+          const activeView = await table.getActiveView();
+          const visibleFieldIds = await activeView.getVisibleFieldIdList();
+
+          if (visibleFieldIds && visibleFieldIds.length > 0) {
+            // 第一个字段就是A列
+            const firstFieldId = visibleFieldIds[0];
+            setFirstColumnFieldId(firstFieldId);
+
+            // 获取字段名称用于日志
+            const firstField = await table.getFieldById(firstFieldId);
+            const firstFieldName = await firstField.getName();
+            setFirstColumnFieldName(firstFieldName);
+            console.log('[FieldAutoComplete] 表格切换，A列字段ID:', firstFieldId, '字段名称:', firstFieldName);
+          }
 
           // 获取所有字段名称
           const allFields = await table.getFieldList();
@@ -334,7 +300,7 @@ const FieldAutoComplete = () => {
             const fieldName = await field.getName();
             fieldNames.add(fieldName);
           }
-
+          setTableChanged(!tableChanged);
           console.log('[FieldAutoComplete] 表格切换，现有字段:', Array.from(fieldNames));
 
           // 更新fields状态，将已存在的字段设置为选中且禁用
@@ -351,9 +317,14 @@ const FieldAutoComplete = () => {
           );
         } else {
           setTableName("");
+          setFirstColumnFieldId("");
+          setFirstColumnFieldName("");
         }
-      } catch {
+      } catch (error) {
+        console.error('[FieldAutoComplete] 处理表格切换失败:', error);
         setTableName("");
+        setFirstColumnFieldId("");
+        setFirstColumnFieldName("");
       }
     };
 
