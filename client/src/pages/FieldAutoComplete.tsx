@@ -311,7 +311,7 @@ const FieldAutoComplete = () => {
                 ...field,
                 isChecked: isExistingField ? true : field.isChecked,
                 isDisabled: isExistingField,
-                helperText: isExistingField ? '数据表已有字段默认选中' : undefined
+                helperText: isExistingField ? '已有字段默认选中' : undefined
               };
             })
           );
