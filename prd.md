@@ -55,3 +55,57 @@
   "CRM预计回收时间": "estimatedRecoveryTime",
   "MRP是否定稿": "isDraft"
 }
+
+
+## 6. 从多维表格读取字段配置
+1. 将下面的配置写入给定的多维表格
+const [fields, setFields] = useState<Field[]>([
+    // NC字段
+    { id: 'orderNo', name: '订单ID', mapping_field: 'orderNo', type: 'NC', isChecked: false, isDisabled: false },
+    { id: 'custShortName', name: '客户简称', mapping_field: 'custShortName', type: 'NC', isChecked: false, isDisabled: false },
+    { id: 'materialIndex', name: '产品索引号', mapping_field: 'materialIndex', type: 'NC', isChecked: false, isDisabled: false },
+    { id: 'debitamount', name: '已收款金额', mapping_field: 'debitamount', type: 'NC', isChecked: false, isDisabled: false },
+    { id: 'incomeName', name: '收款协议（NC）', mapping_field: 'incomeName', type: 'NC', isChecked: false, isDisabled: false },
+    { id: 'quantityOnHand', name: '现存量', mapping_field: 'quantityOnHand', type: 'NC', isChecked: false, isDisabled: false },
+    { id: 'salesperson', name: '销售负责人', mapping_field: 'salesperson', type: 'NC', isChecked: false, isDisabled: false },
+    { id: 'deliveryFactory', name: '发货工厂', mapping_field: 'deliveryFactory', type: 'NC', isChecked: false, isDisabled: false },
+    { id: 'custRequestDate', name: '客户要求日期', mapping_field: 'custRequestDate', type: 'NC', isChecked: false, isDisabled: false },
+    { id: 'deliveryDate', name: '签署PI交期', mapping_field: 'deliveryDate', type: 'NC', isChecked: false, isDisabled: false },
+    { id: 'boxOrNot', name: '箱盒是否下单', mapping_field: 'boxOrNot', type: 'NC', isChecked: false, isDisabled: false },
+
+    // SMOM字段
+    { id: 'plannedStartTime', name: '计划开始时间', mapping_field: 'plannedStartTime', type: 'SMOM', isChecked: false, isDisabled: false },
+    { id: 'planEndTime', name: '计划结束时间', mapping_field: 'planEndTime', type: 'SMOM', isChecked: false, isDisabled: false },
+
+    // TMS字段
+    { id: 'bookingStatus', name: '订舱状态', mapping_field: 'bookingStatus', type: 'TMS', isChecked: false, isDisabled: false },
+    { id: 'etd', name: 'ETD', mapping_field: 'etd', type: 'TMS', isChecked: false, isDisabled: false },
+    { id: 'eta', name: 'ETA', mapping_field: 'eta', type: 'TMS', isChecked: false, isDisabled: false },
+    { id: 'loadDate', name: '装柜时间', mapping_field: 'loadDate', type: 'TMS', isChecked: false, isDisabled: false },
+    { id: 'needShipment', name: '是否需要出货', mapping_field: 'needShipment', type: 'TMS', isChecked: false, isDisabled: false },
+
+    // CRM字段
+    { id: 'customerCode', name: '客户编码', mapping_field: 'customerCode', type: 'CRM', isChecked: false, isDisabled: false },
+    { id: 'custName', name: '客户全称', mapping_field: 'custName', type: 'CRM', isChecked: false, isDisabled: false },
+    { id: 'country', name: '客户国家', mapping_field: 'country', type: 'CRM', isChecked: false, isDisabled: false },
+    { id: 'publicSea', name: '所属区域公海', mapping_field: 'publicSea', type: 'CRM', isChecked: false, isDisabled: false },
+    { id: 'publicSeaPoolStatus', name: '公海池状态', mapping_field: 'publicSeaPoolStatus', type: 'CRM', isChecked: false, isDisabled: false },
+    { id: 'paymentPeriod', name: '账期', mapping_field: 'paymentPeriod', type: 'CRM', isChecked: false, isDisabled: false },
+    { id: 'collectionAgreement', name: '收款协议（CRM）', mapping_field: 'collectionAgreement', type: 'CRM', isChecked: false, isDisabled: false },
+    { id: 'estimatedRecoveryTime', name: '预计回收时间', mapping_field: 'estimatedRecoveryTime', type: 'CRM', isChecked: false, isDisabled: false },
+
+    // MRP字段
+    { id: 'isDraft', name: '图稿状态', mapping_field: 'isDraft', type: 'MRP', isChecked: false, isDisabled: false },
+  ]);
+  ### 写入规则
+- id字段替换为数字，从1开始编号
+- type对应表格中的source字段
+- 不写入isChecked和isDisabled字段
+写入的代码参考我给定的test.js文件的代码
+
+### 读取规则
+fields不再hardcode在代码中，而是插件启动时从多维表格读取，映射规则如我上面写入规则所述，有不清晰不明白的请先问我
+
+
+
+表格链接：https://global-intco.feishu.cn/base/Tzgpbndy9a6aZfsKuKhcaFT8nag?table=tblbxDXCWmq9kaCT&view=vewCygP2wl
