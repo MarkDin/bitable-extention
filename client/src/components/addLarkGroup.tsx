@@ -25,7 +25,7 @@ const InfoMessage: React.FC = () => {
                         rel="noopener noreferrer"
                         className="inline-flex items-center px-2 py-1 text-xs font-medium text-[#007aff] bg-white/60 rounded border border-[#007aff]/20 hover:bg-[#007aff]/10 hover:border-[#007aff]/40 transition-colors"
                     >
-                        查看帮助文档
+                        查看字段定义
                     </a>
                 </div>
             </div>
