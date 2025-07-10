@@ -198,7 +198,7 @@ const FieldItem: React.FC<{
                 </label>
             </div>
             {field.isDisabled && (
-                <span className="text-xs text-[#86909c]">数据表已有字段默认选中</span>
+                <span className="text-xs text-[#86909c]">已有字段默认选中</span>
             )}
         </div>
     );

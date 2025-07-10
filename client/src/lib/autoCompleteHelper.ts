@@ -1,7 +1,7 @@
-import { getDataByIds, MockGetDataByIdsResult } from "@/lib/dataSync";
+import { getDataByIds, GetDataByIdsResult } from "@/lib/dataSync";
 import { ensureFieldsExist, FieldCreationConfig, formatFieldCreationResults } from "@/lib/fieldManager";
 import { Field } from "@/types/common";
-import type { ITable, IOpenCellValue, ICommonSelectFieldProperty, ISelectFieldOption, IOpenSingleSelect } from "@lark-base-open/js-sdk";
+import type { ICommonSelectFieldProperty, IOpenCellValue, IOpenSingleSelect, ISelectFieldOption, ISingleSelectField, ITable } from "@lark-base-open/js-sdk";
 import { bitable, FieldType as BitableFieldType } from "@lark-base-open/js-sdk";
 
 // 操作日志接口定义 - 导出以便其他文件使用
@@ -145,9 +145,16 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
     // 收集本次新建的字段ID
     const newlyCreatedFieldIds = new Set<string>();
     if (results) {
+      // 重新获取字段列表，找到新创建的字段
+      const updatedFields = await activeTable.getFieldMetaList();
+      const fieldNameToId = Object.fromEntries(updatedFields.map(f => [f.name, f.id]));
+
       for (const result of results) {
-        if (result.success && result.fieldId) {
-          newlyCreatedFieldIds.add(result.fieldId);
+        if (result.success) {
+          const fieldId = fieldNameToId[result.fieldName];
+          if (fieldId) {
+            newlyCreatedFieldIds.add(fieldId);
+          }
         }
       }
     }
@@ -203,16 +210,16 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
     // 构建字段信息映射，包含类型和选项
     const fieldInfoMap = new Map<string, ISelectFieldOption[]>();
     for (const field of allFields) {
-      if(field.type === BitableFieldType.SingleSelect) {
+      if (field.type === BitableFieldType.SingleSelect) {
         let p = field.property as ICommonSelectFieldProperty;
         const options = p.options || [];
-    
+
 
         fieldInfoMap.set(field.id, options);
       }
-      
+
     }
-    
+
     console.log(`[AutoComplete] 字段信息映射:`, fieldInfoMap);
     // 收集所有需要查询的值
     const queryValues: string[] = [];
@@ -220,9 +227,11 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
 
     for (const recordId of recordIdList) {
       try {
-        const queryValue : IOpenCellValue = await activeTable.getCellValue(queryFieldId, recordId);
+        const queryValue: IOpenCellValue = await activeTable.getCellValue(queryFieldId, recordId);
+        // @ts-ignore
         if (queryValue && queryValue.length > 0) {
           console.log(`[AutoComplete] 获取到记录 ${recordId} 的查询字段值:`, queryValue);
+          // @ts-ignore
           const trimmedValue = queryValue[0].text.trim();
           queryValues.push(trimmedValue);
           recordQueryMap.set(recordId, trimmedValue);
@@ -262,8 +271,42 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
     // 去重并打印queryValues
     // const uniqueQueryValues = [...new Set(queryValues)];
     // console.log('去重后的queryValues:', uniqueQueryValues);
-    const apiResult: MockGetDataByIdsResult = await getDataByIds(queryValues);
+    const apiResult: GetDataByIdsResult = await getDataByIds(queryValues);
     console.log(`[AutoComplete] API返回 ${Object.keys(apiResult.data.result_map).length} 条数据`, apiResult.error_msg);
+
+    // 检查API结果是否为空或有错误
+    if (!apiResult.success || apiResult.error_msg || Object.keys(apiResult.data.result_map).length === 0) {
+      const errorMessage = apiResult.error_msg || 'API返回数据为空';
+      console.error('[AutoComplete] API调用失败或返回空数据:', errorMessage);
+
+      // 显示错误提示
+      toast({
+        title: 'API调用失败',
+        description: errorMessage,
+        variant: 'destructive'
+      });
+
+      // 记录结束时间并完成操作日志
+      const endTime = new Date().toISOString();
+      const result = {
+        status: 'failed' as const,
+        successCount: 0,
+        errorCount: queryValues.length,
+        unchangedCount: 0,
+        fieldCreationErrors: fieldCreationErrors.length > 0 ? fieldCreationErrors : []
+      };
+
+      // 完成操作日志
+      const finalLog: OperationLog = {
+        ...operationLog,
+        endTime,
+        completionResult: result
+      } as OperationLog;
+
+      onComplete?.(result);
+      onOperationLog?.(finalLog);
+      return;
+    }
 
     // 准备批量更新的数据
     const batchUpdates: BatchRecordUpdate[] = [];
@@ -283,7 +326,7 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
         console.log(`[AutoComplete] 跳过记录 ${recordId} 的查询字段值:`, queryValue);
         continue;
       }
-
+      // rowMap 是一行所有字段值的map
       const rowMap = apiResult.data.result_map[queryValue];
       if (!rowMap) {
         recordStatuses.push({
@@ -305,7 +348,11 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
           continue
         }; // 跳过查询字段本身
 
-        let newValue: any = rowMap[field.mapping_field].value;
+        let newValue: any = rowMap[field.mapping_field]?.value;
+        if (!newValue) {
+          console.log(`[AutoComplete] 跳过字段 ${field.name} 的值为空:`, rowMap);
+          continue;
+        }
         if (field.name.includes('计划开始时间') || field.name.includes('计划结束时间')) {
           // 将时间字符串转换为时间戳
           if (newValue && typeof newValue === 'string') {
@@ -313,10 +360,10 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
             newValue = timestamp;
           }
         }
-        
+
         // 处理SingleSelect字段：将文本值转换为选项ID
         const options = fieldInfoMap.get(fieldId);
-        if (options  && !newlyCreatedFieldIds.has(fieldId)) {
+        if (options && !newlyCreatedFieldIds.has(fieldId)) {
           const option = options.find(opt => opt.name === newValue);
           if (option) {
             console.log(`[AutoComplete] 找到选项 ${newValue}，ID: ${option.id}`);
@@ -352,65 +399,39 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
             // 选项不存在，尝试创建新选项
             console.log(`[AutoComplete] 字段 ${field.name} 的选项 ${newValue} 不存在，尝试创建`);
             try {
-              // 获取当前字段信息
-              const fieldMeta = await activeTable.getFieldById(fieldId);
-              const currentOptions = fieldMeta?.options || [];
-              
-              // 检查是否已经在当前会话中添加过该选项（避免重复添加）
-              const existingInSession = currentOptions.some(opt => opt.text === newValue);
-              if (!existingInSession) {
-                // 创建新选项
-                const newOption = {
-                  text: newValue,
-                  color: '#FF5252' // 默认颜色
-                };
-                
-                // 更新字段属性添加新选项
-                const updatedField = await activeTable.updateField(fieldId, {
-                  property: {
-                    options: [...currentOptions, newOption]
-                  }
-                });
-                
-                console.log(`[AutoComplete] 成功创建选项 ${newValue} 到字段 ${field.name}`);
-                
-                // 获取新创建选项的ID
-                const newOptionId = updatedField.property.options.find(opt => opt.text === newValue)?.id;
-                if (!newOptionId) {
-                  throw new Error('无法获取新创建选项的ID');
-                }
-                
-                // 更新fieldInfoMap中的选项
-                const updatedOptions = [...currentOptions, { ...newOption, id: newOptionId }];
-                fieldInfoMap.set(fieldId, {
-                  ...fieldInfoMap.get(fieldId),
-                  options: updatedOptions
-                });
-                
-                newValue = newOptionId;
-                // 使用setCellValue设置新创建的选项值
-                await activeTable.setCellValue(fieldId, recordId, {
-                  id: newOptionId,
-                  text: newValue
-                });
-                changedFields.push(field.name);
-                console.log(`[AutoComplete] 创建并设置新选项 ${newValue} 到字段 ${field.name}`);
-                continue; // 跳过后续批量更新逻辑
-              } else {
-                // 选项已存在但之前未加载，可能是并发添加的情况
-                const existingOption = currentOptions.find(opt => opt.text === newValue);
-                if (existingOption) {
-                  await activeTable.setCellValue(fieldId, recordId, {
-                    id: existingOption.id,
-                    text: newValue
-                  });
-                  changedFields.push(field.name);
-                  console.log(`[AutoComplete] 设置已有选项 ${newValue} 到字段 ${field.name}`);
-                  continue; // 跳过后续批量更新逻辑
-                } else {
-                  throw new Error('选项创建后仍未找到');
-                }
+              // 获取单选字段对象
+              const singleSelectField = await activeTable.getField<ISingleSelectField>(fieldId);
+
+              // 使用addOption方法添加新选项
+              await singleSelectField.addOption(newValue);
+              console.log(`[AutoComplete] 成功创建选项 ${newValue} 到字段 ${field.name}`);
+
+              // 重新获取字段选项以获取新创建选项的ID
+              const updatedOptions = await singleSelectField.getOptions();
+              const newOption = updatedOptions.find((opt: ISelectFieldOption) => opt.name === newValue);
+
+              if (!newOption) {
+                throw new Error('无法获取新创建选项的信息');
               }
+
+              // 更新fieldInfoMap中的选项缓存
+              const currentOptionsInMap = fieldInfoMap.get(fieldId) || [];
+              const updatedOptionsForMap = [
+                ...currentOptionsInMap,
+                { id: newOption.id, name: newOption.name, color: newOption.color }
+              ];
+              fieldInfoMap.set(fieldId, updatedOptionsForMap);
+
+              // 设置单元格值
+              await activeTable.setCellValue(fieldId, recordId, {
+                id: newOption.id,
+                text: newValue
+              });
+
+              changedFields.push(field.name);
+              console.log(`[AutoComplete] 创建并设置新选项 ${newValue} 到字段 ${field.name}`);
+              continue; // 跳过后续批量更新逻辑
+
             } catch (error) {
               const errorMsg = error instanceof Error ? error.message : '创建选项失败';
               console.error(`[AutoComplete] 创建选项失败: ${errorMsg}`);
@@ -423,7 +444,7 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
             }
           }
         }
-        
+
         // console.log(`[AutoComplete] 获取到 ${field.name} 的值:`, newValue);
         if (newValue === undefined || newValue === null || newValue === '') {
           // 新增：收集未获取到的字段名

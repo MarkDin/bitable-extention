@@ -96,7 +96,7 @@ export enum QueryType {
   ORDER = 'order'        // 订单ID
 }
 
-export interface MockGetDataByIdsResult {
+export interface GetDataByIdsResult {
   success: boolean;
   data: {
     result_map: Record<string, Record<string, { value: string, source: string, systemName: string }>>;
@@ -109,7 +109,7 @@ export interface MockGetDataByIdsResult {
  * @param id_list 需要获取的 id 列表
  * @returns 接口返回数据
  */
-export async function getDataByIds(id_list: string[]): Promise<MockGetDataByIdsResult> {
+export async function getDataByIds(id_list: string[]): Promise<GetDataByIdsResult> {
   console.log('getDataByIds', id_list);
 
   // 构建查询参数，每个ID作为一个单独的 id_list 参数

@@ -8,12 +8,26 @@ const InfoMessage: React.FC = () => {
                 <div className="size-5 flex items-center justify-center">
                     <Info className="size-4 text-[#007aff]" />
                 </div>
-                <p className="text-sm font-medium text-[#1d2129]">
-                    如需帮助，请
-                    <a href="https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=feer8ca0-aa20-45f8-9d9d-845c19e28b98" target="_blank" rel="noopener noreferrer" className="text-[#007aff] hover:underline">
+                <div className="flex items-center gap-2 text-sm font-medium text-[#1d2129]">
+                    <span>如需帮助，请</span>
+                    <a
+                        href="https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=feer8ca0-aa20-45f8-9d9d-845c19e28b98"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center px-2 py-1 text-xs font-medium text-[#007aff] bg-white/60 rounded border border-[#007aff]/20 hover:bg-[#007aff]/10 hover:border-[#007aff]/40 transition-colors"
+                    >
                         加入群聊反馈
                     </a>
-                </p>
+                    <span>或</span>
+                    <a
+                        href="https://global-intco.feishu.cn/docx/Nej2ddbQ8oqVTHxaZMgcNUx7nuf"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center px-2 py-1 text-xs font-medium text-[#007aff] bg-white/60 rounded border border-[#007aff]/20 hover:bg-[#007aff]/10 hover:border-[#007aff]/40 transition-colors"
+                    >
+                        查看字段定义
+                    </a>
+                </div>
             </div>
         </div>
     );

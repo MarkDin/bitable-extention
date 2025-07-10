@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiService } from "@/lib/apiService";
 import { autoCompleteFields } from "@/lib/autoCompleteHelper";
 import { QueryType } from "@/lib/dataSync";
+import { getFieldsConfig } from "@/lib/fieldsConfigService";
 import { cn } from "@/lib/utils";
 import { Field } from "@/types/common";
 import { bitable } from "@lark-base-open/js-sdk";
@@ -161,45 +162,17 @@ const FieldTag: React.FC<{ type: string }> = ({ type }) => {
 
 
 const FieldAutoComplete = () => {
+  // 使用 useQuery 从多维表格获取字段配置
+  const { data: fieldsConfigData, isLoading: fieldsConfigLoading, error: fieldsConfigError } = useQuery({
+    queryKey: ['fieldsConfig'],
+    queryFn: getFieldsConfig,
+    staleTime: 5 * 60 * 1000, // 5分钟内不会重新请求
+    gcTime: 10 * 60 * 1000, // 10分钟后垃圾回收
+    retry: 2, // 失败重试2次
+  });
+
   // 初始化字段数据
-  const [fields, setFields] = useState<Field[]>([
-    // NC字段
-    { id: 'orderNo', name: '订单ID', mapping_field: 'orderNo', type: 'NC', isChecked: false, isDisabled: false },
-    { id: 'custShortName', name: '客户简称', mapping_field: 'custShortName', type: 'NC', isChecked: false, isDisabled: false },
-    { id: 'materialIndex', name: '产品索引号', mapping_field: 'materialIndex', type: 'NC', isChecked: false, isDisabled: false },
-    { id: 'debitamount', name: '已收款金额', mapping_field: 'debitamount', type: 'NC', isChecked: false, isDisabled: false },
-    { id: 'incomeName', name: '收款协议（NC）', mapping_field: 'incomeName', type: 'NC', isChecked: false, isDisabled: false },
-    { id: 'quantityOnHand', name: '现存量', mapping_field: 'quantityOnHand', type: 'NC', isChecked: false, isDisabled: false },
-    { id: 'salesperson', name: '销售负责人', mapping_field: 'salesperson', type: 'NC', isChecked: false, isDisabled: false },
-    { id: 'deliveryFactory', name: '发货工厂', mapping_field: 'deliveryFactory', type: 'NC', isChecked: false, isDisabled: false },
-    { id: 'custRequestDate', name: '客户要求日期', mapping_field: 'custRequestDate', type: 'NC', isChecked: false, isDisabled: false },
-    { id: 'deliveryDate', name: '签署PI交期', mapping_field: 'deliveryDate', type: 'NC', isChecked: false, isDisabled: false },
-    { id: 'boxOrNot', name: '箱盒是否下单', mapping_field: 'boxOrNot', type: 'NC', isChecked: false, isDisabled: false },
-
-    // SMOM字段
-    { id: 'plannedStartTime', name: '计划开始时间', mapping_field: 'plannedStartTime', type: 'SMOM', isChecked: false, isDisabled: false },
-    { id: 'planEndTime', name: '计划结束时间', mapping_field: 'planEndTime', type: 'SMOM', isChecked: false, isDisabled: false },
-
-    // TMS字段
-    { id: 'bookingStatus', name: '订舱状态', mapping_field: 'bookingStatus', type: 'TMS', isChecked: false, isDisabled: false },
-    { id: 'etd', name: 'ETD', mapping_field: 'etd', type: 'TMS', isChecked: false, isDisabled: false },
-    { id: 'eta', name: 'ETA', mapping_field: 'eta', type: 'TMS', isChecked: false, isDisabled: false },
-    { id: 'loadDate', name: '装柜时间', mapping_field: 'loadDate', type: 'TMS', isChecked: false, isDisabled: false },
-    { id: 'needShipment', name: '是否需要出货', mapping_field: 'needShipment', type: 'TMS', isChecked: false, isDisabled: false },
-
-    // CRM字段
-    { id: 'customerCode', name: '客户编码', mapping_field: 'customerCode', type: 'CRM', isChecked: false, isDisabled: false },
-    { id: 'custName', name: '客户全称', mapping_field: 'custName', type: 'CRM', isChecked: false, isDisabled: false },
-    { id: 'country', name: '客户国家', mapping_field: 'country', type: 'CRM', isChecked: false, isDisabled: false },
-    { id: 'publicSea', name: '所属区域公海', mapping_field: 'publicSea', type: 'CRM', isChecked: false, isDisabled: false },
-    { id: 'publicSeaPoolStatus', name: '公海池状态', mapping_field: 'publicSeaPoolStatus', type: 'CRM', isChecked: false, isDisabled: false },
-    { id: 'paymentPeriod', name: '账期', mapping_field: 'paymentPeriod', type: 'CRM', isChecked: false, isDisabled: false },
-    { id: 'collectionAgreement', name: '收款协议（CRM）', mapping_field: 'collectionAgreement', type: 'CRM', isChecked: false, isDisabled: false },
-    { id: 'estimatedRecoveryTime', name: '预计回收时间', mapping_field: 'estimatedRecoveryTime', type: 'CRM', isChecked: false, isDisabled: false },
-
-    // MRP字段
-    { id: 'isDraft', name: '图稿状态', mapping_field: 'isDraft', type: 'MRP', isChecked: false, isDisabled: false },
-  ]);
+  const [fields, setFields] = useState<Field[]>([]);
   const { toast } = useToast();
   const {
     selection,
@@ -214,10 +187,31 @@ const FieldAutoComplete = () => {
   const [tableName, setTableName] = useState<string>("");
   const [configLoading, setConfigLoading] = useState(false);
   const [currentTable, setCurrentTable] = useState<any>(null);
+  const [tableChanged, setTableChanged] = useState(false);
 
   // 进度相关状态
   const [progressData, setProgressData] = useState({ completed: 0, total: 0 });
   const [completionResult, setCompletionResult] = useState<CompletionResult | null>(null);
+
+  // 当字段配置数据加载完成时，更新本地状态
+  useEffect(() => {
+    if (fieldsConfigData && fieldsConfigData.length > 0) {
+      console.log('[FieldAutoComplete] 字段配置加载完成，共', fieldsConfigData.length, '个字段');
+      setFields(fieldsConfigData);
+    }
+  }, [fieldsConfigData]);
+
+  // 如果字段配置加载失败，显示错误提示
+  useEffect(() => {
+    if (fieldsConfigError) {
+      console.error('[FieldAutoComplete] 字段配置加载失败:', fieldsConfigError);
+      toast({
+        title: "字段配置加载失败",
+        description: "无法从多维表格加载字段配置，将使用默认配置。",
+        variant: "destructive",
+      });
+    }
+  }, [fieldsConfigError, toast]);
 
   // 处理字段选择变化
   const handleFieldChange = (id: string, checked: boolean) => {
@@ -239,82 +233,30 @@ const FieldAutoComplete = () => {
   const isAllSelected = selectableFields.length > 0 && selectedCount === selectableFields.length;
   const isPartiallySelected = selectedCount > 0 && selectedCount < selectableFields.length;
 
-  // 获取第一列字段ID
+  // 初始化表格时的处理逻辑已合并到 handleSelectionChange 中
+  // 这里保留一个空的 useEffect 来处理 tableChanged 的依赖
   useEffect(() => {
-    const initializeTable = async () => {
-      try {
-        const table = await bitable.base.getActiveTable();
-        setCurrentTable(table);
-
-        // 获取有序的字段列表（通过视图获取）
-        const activeView = await table.getActiveView();
-        const visibleFieldIds = await activeView.getVisibleFieldIdList();
-
-        if (visibleFieldIds && visibleFieldIds.length > 0) {
-          // 第一个字段就是A列
-          const firstFieldId = visibleFieldIds[0];
-          setFirstColumnFieldId(firstFieldId);
-
-          // 获取字段名称用于日志
-          const firstField = await table.getFieldById(firstFieldId);
-          const name = await firstField.getName();
-          setFirstColumnFieldName(name);
-          console.log('[FieldAutoComplete] A列字段ID:', firstFieldId, '字段名称:', name);
-        }
-
-        // 获取所有字段名称
-        const allFields = await table.getFieldList();
-        const fieldNames = new Set<string>();
-
-        for (const field of allFields) {
-          const fieldName = await field.getName();
-          fieldNames.add(fieldName);
-        }
-
-        console.log('[FieldAutoComplete] 表格现有字段:', Array.from(fieldNames));
-
-        // 更新fields状态，将已存在的字段设置为选中且禁用
-        setFields(prevFields =>
-          prevFields.map(field => {
-            const isExistingField = fieldNames.has(field.name);
-            return {
-              ...field,
-              isChecked: isExistingField ? true : field.isChecked,
-              isDisabled: isExistingField,
-              helperText: isExistingField ? '数据表已有字段默认选中' : undefined
-            };
-          })
-        );
-      } catch (error) {
-        console.error('[FieldAutoComplete] 初始化表格失败:', error);
-        toast({
-          variant: "destructive",
-          title: "错误",
-          description: "初始化表格失败",
-        });
-      }
-    };
-
-    initializeTable();
-  }, [toast]);
+    // tableChanged 状态变化时不需要额外处理，
+    // 因为 handleSelectionChange 已经处理了所有逻辑
+  }, [toast, tableChanged]);
 
 
   // 直接从apiService获取字段映射
-  const { data: mappingsData } = useQuery({
-    queryKey: ["mappings", dataSource],
-    queryFn: async () => {
-      const mappings = await apiService.getFieldMappings(dataSource);
-      return { mappings };
-    },
-    enabled: !!dataSource,
-  });
+  // const { data: mappingsData } = useQuery({
+  //   queryKey: ["mappings", dataSource],
+  //   queryFn: async () => {
+  //     const mappings = await apiService.getFieldMappings(dataSource);
+  //     return { mappings };
+  //   },
+  //   enabled: !!dataSource,
+  // });
 
-  // Update mappings when fetched
-  useEffect(() => {
-    if (mappingsData?.mappings) {
+  // // Update mappings when fetched
+  // useEffect(() => {
+  //   if (mappingsData?.mappings) {
 
-    }
-  }, [mappingsData]);
+  //   }
+  // }, [mappingsData]);
 
 
   useEffect(() => {
@@ -325,6 +267,23 @@ const FieldAutoComplete = () => {
         if (table && typeof table.getName === "function") {
           const name = await table.getName();
           setTableName(name);
+          setCurrentTable(table);
+
+          // 获取有序的字段列表（通过视图获取）- 更新第一列字段信息
+          const activeView = await table.getActiveView();
+          const visibleFieldIds = await activeView.getVisibleFieldIdList();
+
+          if (visibleFieldIds && visibleFieldIds.length > 0) {
+            // 第一个字段就是A列
+            const firstFieldId = visibleFieldIds[0];
+            setFirstColumnFieldId(firstFieldId);
+
+            // 获取字段名称用于日志
+            const firstField = await table.getFieldById(firstFieldId);
+            const firstFieldName = await firstField.getName();
+            setFirstColumnFieldName(firstFieldName);
+            console.log('[FieldAutoComplete] 表格切换，A列字段ID:', firstFieldId, '字段名称:', firstFieldName);
+          }
 
           // 获取所有字段名称
           const allFields = await table.getFieldList();
@@ -334,7 +293,7 @@ const FieldAutoComplete = () => {
             const fieldName = await field.getName();
             fieldNames.add(fieldName);
           }
-
+          setTableChanged(!tableChanged);
           console.log('[FieldAutoComplete] 表格切换，现有字段:', Array.from(fieldNames));
 
           // 更新fields状态，将已存在的字段设置为选中且禁用
@@ -345,15 +304,20 @@ const FieldAutoComplete = () => {
                 ...field,
                 isChecked: isExistingField ? true : field.isChecked,
                 isDisabled: isExistingField,
-                helperText: isExistingField ? '数据表已有字段默认选中' : undefined
+                helperText: isExistingField ? '已有字段默认选中' : undefined
               };
             })
           );
         } else {
           setTableName("");
+          setFirstColumnFieldId("");
+          setFirstColumnFieldName("");
         }
-      } catch {
+      } catch (error) {
+        console.error('[FieldAutoComplete] 处理表格切换失败:', error);
         setTableName("");
+        setFirstColumnFieldId("");
+        setFirstColumnFieldName("");
       }
     };
 
@@ -496,12 +460,24 @@ const FieldAutoComplete = () => {
     );
   }
 
-  // 如果配置还在加载中，显示加载状态
-  if (configLoading) {
+  // 如果字段配置还在加载中，显示加载状态
+  if (fieldsConfigLoading) {
     return (
       <div className="p-4 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-sm text-[#86909C]">正在加载字段配置...</div>
+          <div className="text-sm text-[#86909C]">正在从多维表格加载字段配置...</div>
+        </div>
+      </div>
+    );
+  }
+
+  // 如果字段配置为空（加载完成但没有数据），显示提示
+  if (!fieldsConfigLoading && fields.length === 0) {
+    return (
+      <div className="p-4 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-sm text-[#86909C] mb-2">字段配置为空</div>
+          <div className="text-xs text-[#c9cdd4]">请检查多维表格中的字段配置数据</div>
         </div>
       </div>
     );
@@ -558,19 +534,22 @@ const FieldAutoComplete = () => {
       {/* 底部区域 */}
       <div className="bg-white border-t border-[#e5e6eb] px-3 sm:px-4 md:px-5 py-2.5 flex flex-col gap-1">
         <p className="text-xs text-[#000000] leading-[22px]">
-          请注意检查你有表格编辑权限
+          {fieldsConfigError
+            ? "⚠️ 字段配置加载失败，使用默认配置"
+            : "请注意检查你有表格编辑权限"
+          }
         </p>
         <button
           onClick={handleApply}
-          disabled={fields.filter(f => f.isChecked).length === 0}
+          disabled={fields.filter(f => f.isChecked).length === 0 || fieldsConfigLoading}
           className={cn(
             "w-full h-8 text-white text-sm font-medium rounded-sm transition-colors flex items-center justify-center",
-            fields.filter(f => f.isChecked).length === 0
+            fields.filter(f => f.isChecked).length === 0 || fieldsConfigLoading
               ? "bg-[#c9cdd4] cursor-not-allowed"
               : "bg-[#165dff] hover:bg-[#4080ff]"
           )}
         >
-          同步数据
+          {fieldsConfigLoading ? "加载中..." : "同步数据"}
         </button>
       </div>
     </div>
