@@ -2,7 +2,6 @@ import { FieldsSection } from "@/components/FieldSelection";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { useFeishuBase } from "@/hooks/use-feishu-base";
 import { useToast } from "@/hooks/use-toast";
-import { apiService } from "@/lib/apiService";
 import { autoCompleteFields } from "@/lib/autoCompleteHelper";
 import { QueryType } from "@/lib/dataSync";
 import { getFieldsConfig } from "@/lib/fieldsConfigService";
@@ -187,19 +186,58 @@ const FieldAutoComplete = () => {
   const [tableName, setTableName] = useState<string>("");
   const [configLoading, setConfigLoading] = useState(false);
   const [currentTable, setCurrentTable] = useState<any>(null);
-  const [tableChanged, setTableChanged] = useState(false);
 
   // 进度相关状态
   const [progressData, setProgressData] = useState({ completed: 0, total: 0 });
   const [completionResult, setCompletionResult] = useState<CompletionResult | null>(null);
 
-  // 当字段配置数据加载完成时，更新本地状态
+  // 字段匹配函数：检查哪些字段在当前表格中已存在
+  const matchExistingFields = async (fieldsToMatch: Field[], currentTableInstance: any) => {
+    try {
+      if (!currentTableInstance || !fieldsToMatch.length) return fieldsToMatch;
+
+      // 获取所有字段名称
+      const allFields = await currentTableInstance.getFieldList();
+      const fieldNames = new Set<string>();
+
+      for (const field of allFields) {
+        const fieldName = await field.getName();
+        fieldNames.add(fieldName);
+      }
+
+      console.log('[FieldAutoComplete] 当前表格字段:', Array.from(fieldNames));
+
+      // 更新字段状态，将已存在的字段设置为选中且禁用
+      return fieldsToMatch.map(field => {
+        const isExistingField = fieldNames.has(field.name);
+        return {
+          ...field,
+          isChecked: isExistingField ? true : field.isChecked,
+          isDisabled: isExistingField,
+          helperText: isExistingField ? '已有字段默认选中' : undefined
+        };
+      });
+    } catch (error) {
+      console.error('[FieldAutoComplete] 匹配字段失败:', error);
+      return fieldsToMatch;
+    }
+  };
+
+  // 当字段配置数据加载完成时，更新本地状态并匹配已存在字段
   useEffect(() => {
     if (fieldsConfigData && fieldsConfigData.length > 0) {
       console.log('[FieldAutoComplete] 字段配置加载完成，共', fieldsConfigData.length, '个字段');
-      setFields(fieldsConfigData);
+
+      // 如果当前有表格，立即进行字段匹配
+      if (currentTable) {
+        matchExistingFields(fieldsConfigData, currentTable).then(matchedFields => {
+          setFields(matchedFields);
+        });
+      } else {
+        setFields(fieldsConfigData);
+      }
     }
-  }, [fieldsConfigData]);
+  }, [fieldsConfigData, currentTable]);
 
   // 如果字段配置加载失败，显示错误提示
   useEffect(() => {
@@ -233,12 +271,7 @@ const FieldAutoComplete = () => {
   const isAllSelected = selectableFields.length > 0 && selectedCount === selectableFields.length;
   const isPartiallySelected = selectedCount > 0 && selectedCount < selectableFields.length;
 
-  // 初始化表格时的处理逻辑已合并到 handleSelectionChange 中
-  // 这里保留一个空的 useEffect 来处理 tableChanged 的依赖
-  useEffect(() => {
-    // tableChanged 状态变化时不需要额外处理，
-    // 因为 handleSelectionChange 已经处理了所有逻辑
-  }, [toast, tableChanged]);
+  // 移除了 tableChanged 相关的逻辑，因为现在使用了更好的字段匹配机制
 
 
   // 直接从apiService获取字段映射
@@ -285,39 +318,23 @@ const FieldAutoComplete = () => {
             console.log('[FieldAutoComplete] 表格切换，A列字段ID:', firstFieldId, '字段名称:', firstFieldName);
           }
 
-          // 获取所有字段名称
-          const allFields = await table.getFieldList();
-          const fieldNames = new Set<string>();
-
-          for (const field of allFields) {
-            const fieldName = await field.getName();
-            fieldNames.add(fieldName);
+          // 如果已有字段配置，进行字段匹配
+          if (fields.length > 0) {
+            const matchedFields = await matchExistingFields(fields, table);
+            setFields(matchedFields);
           }
-          setTableChanged(!tableChanged);
-          console.log('[FieldAutoComplete] 表格切换，现有字段:', Array.from(fieldNames));
-
-          // 更新fields状态，将已存在的字段设置为选中且禁用
-          setFields(prevFields =>
-            prevFields.map(field => {
-              const isExistingField = fieldNames.has(field.name);
-              return {
-                ...field,
-                isChecked: isExistingField ? true : field.isChecked,
-                isDisabled: isExistingField,
-                helperText: isExistingField ? '已有字段默认选中' : undefined
-              };
-            })
-          );
         } else {
           setTableName("");
           setFirstColumnFieldId("");
           setFirstColumnFieldName("");
+          setCurrentTable(null);
         }
       } catch (error) {
         console.error('[FieldAutoComplete] 处理表格切换失败:', error);
         setTableName("");
         setFirstColumnFieldId("");
         setFirstColumnFieldName("");
+        setCurrentTable(null);
       }
     };
 
