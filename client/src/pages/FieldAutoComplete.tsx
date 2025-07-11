@@ -129,36 +129,6 @@ const CustomCheckbox: React.FC<{
   );
 };
 
-// 字段标签组件
-const FieldTag: React.FC<{ type: string }> = ({ type }) => {
-  // 根据字段类型确定标签样式
-  const getTagStyle = () => {
-    switch (type) {
-      case 'NC':
-        return { bg: 'bg-[#f5e8ff]', text: 'text-[#722ed1]', label: 'NC' };
-      case 'SMOM':
-        return { bg: 'bg-[#fff3e8]', text: 'text-[#ff8800]', label: 'SMOM' };
-      case 'TMS':
-        return { bg: 'bg-[#e8f3ff]', text: 'text-[#165dff]', label: 'TMS' };
-      case 'CRM':
-        return { bg: 'bg-[#e8ffea]', text: 'text-[#00d437]', label: 'CRM' };
-      case 'MRP':
-        return { bg: 'bg-[#ffe8f1]', text: 'text-[#ff0066]', label: 'MRP' };
-      case '赛意':
-        return { bg: 'bg-[#e8fffb]', text: 'text-[#0fc6c2]', label: '赛意' };
-      default:
-        return { bg: 'bg-[#f5e8ff]', text: 'text-[#722ed1]', label: type };
-    }
-  };
-
-  const style = getTagStyle();
-  return (
-    <div className={cn('px-2 h-5 flex items-center rounded-sm text-xs', style.bg)}>
-      <span className={style.text}>{style.label}</span>
-    </div>
-  );
-};
-
 
 const FieldAutoComplete = () => {
   // 使用 useQuery 从多维表格获取字段配置

@@ -57,17 +57,6 @@ interface BitableRecord {
     };
 }
 
-/**
- * 验证并转换字段类型
- */
-function validateFieldType(type: string): FieldType {
-    const validTypes: FieldType[] = ['NC', 'SMOM', 'TMS', 'CRM', 'MRP', '赛意'];
-    if (validTypes.includes(type as FieldType)) {
-        return type as FieldType;
-    }
-    console.warn(`[FieldsConfigService] 未知的字段类型: ${type}, 使用默认类型 'NC'`);
-    return 'NC';
-}
 
 /**
  * 获取飞书访问令牌
@@ -147,7 +136,7 @@ async function fetchFieldsFromBitable(): Promise<Field[]> {
                     id: fields.mapping_field, // 使用mapping_field作为id
                     name: fields.name,
                     mapping_field: fields.mapping_field,
-                    type: validateFieldType(fields.source), // 验证并转换字段类型
+                    type: fields.source,
                     isChecked: false,
                     isDisabled: fields.enable === 0
                 };
@@ -174,7 +163,7 @@ export async function getFieldsConfig(): Promise<Field[]> {
             return DEFAULT_FIELDS;
         }
 
-        console.log(`[FieldsConfigService] 成功获取 ${fields.length} 个字段配置`);
+        console.log(`[FieldsConfigService] 成功获取 ${fields.length} 个字段配置, 字段配置为: ${JSON.stringify(fields)}`);
         return fields;
     } catch (error) {
         console.error('[FieldsConfigService] 获取字段配置失败，使用默认配置:', error);
