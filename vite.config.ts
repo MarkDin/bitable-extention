@@ -31,5 +31,17 @@ export default defineConfig({
     //   key: await import('fs').then(fs => fs.readFileSync("key.pem")),
     //   cert: await import('fs').then(fs => fs.readFileSync("cert.pem")),
     // },
+    proxy: {
+      // 代理飞书API请求，解决CORS问题
+      '/api/feishu': {
+        target: 'https://open.feishu.cn',
+        changeOrigin: true,
+        secure: true,
+        rewrite: (path) => path.replace(/^\/api\/feishu/, ''),
+        headers: {
+          'Origin': 'https://open.feishu.cn',
+        }
+      }
+    }
   }
 });

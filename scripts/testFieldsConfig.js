@@ -76,44 +76,7 @@ async function testReadPermission() {
         } catch (recordsError) {
             console.log('❌ 记录读取异常:', recordsError.response?.data || recordsError.message);
         }
-
-        // 5. 测试写入权限（创建一条测试记录）
-        console.log('正在测试写入权限...');
-        try {
-            const testRecord = {
-                fields: {
-                    id: 999,
-                    name: '测试字段',
-                    mapping_field: 'test_field',
-                    source: 'TEST'
-                }
-            };
-
-            const writeResp = await axiosInstance.post(
-                `https://open.feishu.cn/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_ID}/records`,
-                { fields: testRecord.fields },
-                { headers: { Authorization: `Bearer ${tenant_access_token}` } }
-            );
-
-            if (writeResp.data.code === 0) {
-                console.log('✅ 写入权限测试成功，记录ID:', writeResp.data.data.record.record_id);
-
-                // 立即删除测试记录
-                try {
-                    await axiosInstance.delete(
-                        `https://open.feishu.cn/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_ID}/records/${writeResp.data.data.record.record_id}`,
-                        { headers: { Authorization: `Bearer ${tenant_access_token}` } }
-                    );
-                    console.log('✅ 测试记录已清理');
-                } catch (deleteError) {
-                    console.log('⚠️ 清理测试记录失败，请手动删除:', deleteError.response?.data || deleteError.message);
-                }
-            } else {
-                console.log('❌ 写入权限测试失败:', writeResp.data.msg);
-            }
-        } catch (writeError) {
-            console.log('❌ 写入权限测试异常:', writeError.response?.data || writeError.message);
-        }
+        return;
 
     } catch (error) {
         console.error('❌ 测试失败:', error.response?.data || error.message);
@@ -121,4 +84,4 @@ async function testReadPermission() {
 }
 
 // 执行测试
-testReadPermission().catch(console.error); 
+testReadPermission().catch(console.error);
