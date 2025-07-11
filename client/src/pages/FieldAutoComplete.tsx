@@ -414,11 +414,6 @@ const FieldAutoComplete = () => {
         const success = await sendOperationLogToFeishu(log);
         if (success) {
           console.log('[FieldAutoComplete] 操作日志已发送到飞书');
-          toast({
-            title: "操作日志已发送",
-            description: "补全结果已发送到飞书群聊",
-            variant: "default"
-          });
         } else {
           console.warn('[FieldAutoComplete] 发送到飞书失败');
         }
