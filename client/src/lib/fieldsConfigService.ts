@@ -1,10 +1,13 @@
-import { Field, FieldType } from "@/types/common";
+import { Field } from "@/types/common";
 
 // 飞书应用配置
 const FEISHU_APP_ID = 'cli_a8823c9bb8f4900b';
 const FEISHU_APP_SECRET = 'v4HA5OV8oGjzewbdAmHWu3cj65vQBoMq';
 const APP_TOKEN = 'Tzgpbndy9a6aZfsKuKhcaFT8nag';
 const TABLE_ID = 'tblbxDXCWmq9kaCT';
+
+// 后端服务配置
+const BACKEND_SERVICE_URL = 'https://crm-data-service-dk1543100966.replit.app';
 
 // 默认字段配置（用作fallback）
 const DEFAULT_FIELDS: Field[] = [
@@ -57,95 +60,63 @@ interface BitableRecord {
     };
 }
 
-
 /**
- * 获取飞书访问令牌
- */
-async function getFeishuToken(): Promise<string> {
-    try {
-        const response = await fetch('/api/feishu/open-apis/auth/v3/tenant_access_token/internal', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                app_id: FEISHU_APP_ID,
-                app_secret: FEISHU_APP_SECRET
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error(`获取Token失败: ${response.status}`);
-        }
-
-        const data = await response.json();
-        if (data.code !== 0) {
-            throw new Error(`获取Token失败: ${data.msg}`);
-        }
-
-        return data.tenant_access_token;
-    } catch (error) {
-        console.error('获取飞书Token失败:', error);
-        throw error;
-    }
-}
-
-/**
- * 从多维表格获取字段配置
+ * 从多维表格获取字段配置（通过后端服务）
  */
 async function fetchFieldsFromBitable(): Promise<Field[]> {
     try {
-        const token = await getFeishuToken();
+        // 构建请求URL，使用查询参数
+        const params = new URLSearchParams({
+            app_id: FEISHU_APP_ID,
+            app_secret: FEISHU_APP_SECRET,
+            app_token: APP_TOKEN,
+            table_id: TABLE_ID
+        });
 
-        // 获取所有记录（支持分页）
-        let has_more = true;
-        let page_token = '';
-        let allRecords: BitableRecord[] = [];
+        const url = `${BACKEND_SERVICE_URL}/get_config_from_bitable?${params.toString()}`;
 
-        while (has_more) {
-            const url = `/api/feishu/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_ID}/records?page_size=100${page_token ? `&page_token=${page_token}` : ''}`;
+        console.log(`[FieldsConfigService] 正在请求后端服务: ${url}`);
 
-            const response = await fetch(url, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error(`获取记录失败: ${response.status}`);
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
             }
+        });
 
-            const data = await response.json();
-            if (data.code !== 0) {
-                throw new Error(`获取记录失败: ${data.msg}`);
-            }
-
-            allRecords = allRecords.concat(data.data.items);
-            has_more = data.data.has_more;
-            page_token = data.data.page_token;
+        if (!response.ok) {
+            throw new Error(`请求后端服务失败: ${response.status} ${response.statusText}`);
         }
 
-        console.log(`[FieldsConfigService] 从多维表格获取到 ${allRecords.length} 条字段配置`);
+        const data = await response.json();
+
+        // 检查后端服务返回的数据格式
+        if (!data.success) {
+            throw new Error(`后端服务返回错误: ${data.message || '未知错误'}`);
+        }
+
+        // 根据实际的后端服务返回数据结构进行适配
+        // 实际格式为 { success: true, data: { fields: [...], total_count: 28 } }
+        const records = data.data?.fields || [];
+
+        console.log(`[FieldsConfigService] 从后端服务获取到 ${records.length} 条字段配置`);
 
         // 转换为前端需要的格式
-        const fields: Field[] = allRecords
-            .map((record) => {
-                const { fields } = record;
-                return {
-                    id: fields.mapping_field, // 使用mapping_field作为id
-                    name: fields.name,
-                    mapping_field: fields.mapping_field,
-                    type: fields.source,
-                    isChecked: false,
-                    isDisabled: fields.enable === 0
-                };
-            })
-            .filter(field => field.name && field.mapping_field); // 过滤掉无效记录
+        // 后端已经返回了符合前端期望的数据格式，只需要简单处理
+        const fields: Field[] = records
+            .map((record: any) => ({
+                id: record.id || record.mapping_field, // 使用id或mapping_field作为id
+                name: record.name,
+                mapping_field: record.mapping_field,
+                type: record.type,
+                isChecked: record.isChecked || false, // 保持后端设置或默认false
+                isDisabled: record.isDisabled || false // 保持后端设置或默认false
+            }))
+            .filter((field: Field) => field.name && field.mapping_field); // 过滤掉无效记录
 
         return fields;
     } catch (error) {
-        console.error('从多维表格获取字段配置失败:', error);
+        console.error('从后端服务获取字段配置失败:', error);
         throw error;
     }
 }
@@ -155,11 +126,11 @@ async function fetchFieldsFromBitable(): Promise<Field[]> {
  */
 export async function getFieldsConfig(): Promise<Field[]> {
     try {
-        console.log('[FieldsConfigService] 正在从多维表格获取字段配置...');
+        console.log('[FieldsConfigService] 正在从后端服务获取字段配置...');
         const fields = await fetchFieldsFromBitable();
 
         if (fields.length === 0) {
-            console.warn('[FieldsConfigService] 多维表格中没有字段配置，使用默认配置');
+            console.warn('[FieldsConfigService] 后端服务返回空数据，使用默认配置');
             return DEFAULT_FIELDS;
         }
 
