@@ -113,7 +113,8 @@ export async function getDataByIds(id_list: string[]): Promise<GetDataByIdsResul
   console.log('getDataByIds', id_list);
 
   // 构建查询参数，每个ID作为一个单独的 id_list 参数
-  const queryParams = id_list.map(id => `id_list=${encodeURIComponent(id)}`).join('&');
+  const id_set = new Set(id_list);
+  const queryParams = Array.from(id_set).map(id => `id_list=${encodeURIComponent(id)}`).join('&');
   const url = `https://api.intcomedical.com:8011/prod-api/external/order/orderDataCompletion?${queryParams}`;
 
   try {

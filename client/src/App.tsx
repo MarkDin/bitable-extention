@@ -7,12 +7,12 @@ import FieldAutoComplete from "@/pages/FieldAutoComplete";
 import NotFound from "@/pages/not-found";
 import PermissionManager from "@/pages/PermissionManager";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { Route, Router, Switch, useLocation } from "wouter";
 import { useHashLocation } from "wouter/use-hash-location";
-import { queryClient } from "./lib/queryClient";
-import { useEffect } from "react";
-import { getDataByIds } from "./lib/dataSync";
 import { toast } from "./hooks/use-toast";
+import { getDataByIds } from "./lib/dataSync";
+import { queryClient } from "./lib/queryClient";
 
 function AppRouter() {
   const [location] = useLocation();
