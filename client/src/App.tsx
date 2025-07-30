@@ -4,6 +4,7 @@ import SimpleFeishuQR from "@/components/SimpleFeishuQR";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import URLTest from "@/components/URLTest";
+import UserInfoDebug from "@/components/UserInfoDebug";
 import { useFeishuBase } from "@/hooks/use-feishu-base";
 import ConfigManager from "@/pages/ConfigManager";
 import FieldAutoComplete from "@/pages/FieldAutoComplete";
@@ -24,6 +25,7 @@ function Router() {
       <Route path="/url-test" component={URLTest} />
       <Route path="/qr-debug" component={QRCodeDebug} />
       <Route path="/simple-qr" component={SimpleFeishuQR} />
+      <Route path="/user-info" component={UserInfoDebug} />
       <Route path="/">
         <PluginLayout>
           <FieldAutoComplete />

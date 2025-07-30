@@ -5,3 +5,6 @@ server/public
 vite.config.ts.*
 *.tar.gz
 *.pem
+
+# YoYo AI version control directory
+.yoyo/
