@@ -11,6 +11,7 @@
 - **用户信息展示**: 显示当前用户 ID 及相关信息
 - **本地数据存储**: 使用飞书插件存储 API 保存配置数据
 - **操作日志功能**: 记录每次补全操作的详细信息
+- **🔐 免登录功能**: 支持Token自动刷新，用户登录后一段时间内无需重复登录
 
 ## 安装和运行
 
@@ -78,6 +79,59 @@ yarn dev:host
 2. 添加一个"多维表格插件"功能
 3. 在插件配置中设置 URL 为此项目的访问地址
 4. 在多维表格中启用该插件
+
+## ⚠️ 重要：Hash路由配置
+
+本项目使用 **Hash路由** 进行页面导航，所有页面访问都需要使用 `#` 符号。
+
+### 页面访问地址
+
+- **主页**: `https://your-domain.com/#/`
+- **登录页面**: `https://your-domain.com/#/login`
+- **用户信息页面**: `https://your-domain.com/#/user-info`
+- **字段自动补全**: `https://your-domain.com/#/auto-complete`
+- **配置管理**: `https://your-domain.com/#/config-manager`
+- **权限管理**: `https://your-domain.com/#/permission-manager`
+
+### 飞书OAuth重定向URI配置
+
+在飞书开放平台应用配置中，**重定向URI** 必须设置为：
+```
+https://your-domain.com/#/auth/callback
+```
+
+**注意**：必须包含 `#` 符号，否则OAuth回调将无法正常工作。
+
+### 本地开发访问地址
+
+启动开发服务器后，访问地址为：
+- **主页**: `https://localhost:5000/#/` 或 `https://localhost:5000/` (自动重定向)
+- **登录页面**: `https://localhost:5000/#/login`
+- **字段自动补全**: `https://localhost:5000/#/auto-complete`
+- **用户信息**: `https://localhost:5000/#/user-info`
+
+> **💡 提示**: 系统会自动检测并重定向到正确的hash路由格式，所以访问 `https://localhost:5000/` 会自动跳转到 `https://localhost:5000/#/`
+
+### 🔐 免登录功能说明
+
+本插件实现了完整的免登录机制：
+
+#### 工作原理
+1. **Token存储**: 用户登录后，access_token、refresh_token和用户信息会自动保存到浏览器本地存储
+2. **自动恢复**: 重新打开插件时，系统会自动检查本地存储的登录状态
+3. **Token刷新**: 当access_token过期时，系统会自动使用refresh_token获取新的token
+4. **状态同步**: 用户信息会同步到全局状态管理中，供整个应用使用
+
+#### 用户体验
+- ✅ **首次登录**: 使用飞书扫码登录
+- ✅ **免登录**: 登录后一段时间内（根据token有效期），重新打开插件无需再次登录
+- ✅ **自动刷新**: Token过期时自动刷新，用户无感知
+- ✅ **状态指示**: 界面显示当前登录状态和用户信息
+
+#### 安全性
+- Token安全存储在浏览器本地，与域名绑定
+- 支持自动Token刷新，延长登录有效期
+- 提供完整的登出功能，清除所有本地认证信息
 
 ## 插件架构
 
@@ -203,6 +257,8 @@ npm install
 npm run dev
 ```
 
+**开发调试时请访问**: `https://localhost:5000/#/login` （注意包含 `#` 符号）
+
 ### 构建发布
 ```bash
 npm run build
@@ -254,6 +310,8 @@ const CARD_TEMPLATE_CONFIG = {
 2. 操作日志包含敏感信息，请谨慎配置 Webhook 地址
 3. 本地日志会占用浏览器存储空间，自动清理超过50条的旧记录
 4. 大量数据补全时请耐心等待，不要关闭插件页面
+5. **⚠️ 重要**：本项目使用Hash路由，所有页面访问必须包含 `#` 符号
+6. **飞书OAuth配置**：重定向URI必须设置为 `https://your-domain.com/#/auth/callback`
 
 ## 许可证
 

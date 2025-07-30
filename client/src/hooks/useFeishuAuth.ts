@@ -5,8 +5,8 @@ import {
     type FeishuUserInfo,
     getStoredAccessToken,
     getStoredUserInfo,
-    getUserAccessToken,
     getUserInfo,
+    getUserInfoFromBackend,
     isLoggedIn,
     isTokenExpired,
     refreshAccessToken,
@@ -22,6 +22,7 @@ interface UseFeishuAuthReturn {
     isLoading: boolean;
     error: string | null;
     login: (code: string) => Promise<void>;
+    loginWithUserInfo: (userInfo: FeishuUserInfo, tokenResponse: FeishuTokenResponse) => Promise<void>;
     logout: () => void;
     refreshToken: () => Promise<void>;
     clearError: () => void;
@@ -53,6 +54,12 @@ export function useFeishuAuth(config: FeishuAuthConfig): UseFeishuAuthReturn {
                         setIsAuthenticated(true);
                         // 将用户信息保存到全局store
                         setFeishuUserInfo(storedUser);
+
+                        console.log('=== 从本地存储恢复用户登录状态 ===');
+                        console.log('用户名:', storedUser.name || '未提供');
+                        console.log('邮箱:', storedUser.email || '未提供或权限不足');
+                        console.log('恢复的用户信息:', storedUser);
+                        console.log('===================================');
                     }
                 }
             } catch (err) {
@@ -90,17 +97,11 @@ export function useFeishuAuth(config: FeishuAuthConfig): UseFeishuAuthReturn {
         return () => clearInterval(interval);
     }, [isAuthenticated, accessToken]);
 
-    // 登录函数
-    const login = useCallback(async (code: string) => {
+    // 使用后端返回的用户信息进行登录
+    const loginWithUserInfo = useCallback(async (userInfo: FeishuUserInfo, tokenResponse: FeishuTokenResponse) => {
         try {
             setIsLoading(true);
             setError(null);
-
-            // 获取访问令牌
-            const tokenResponse: FeishuTokenResponse = await getUserAccessToken(code, config);
-
-            // 获取用户信息
-            const userInfo: FeishuUserInfo = await getUserInfo(tokenResponse.access_token);
 
             // 存储认证信息
             storeAuthInfo(tokenResponse, userInfo);
@@ -113,7 +114,27 @@ export function useFeishuAuth(config: FeishuAuthConfig): UseFeishuAuthReturn {
             // 将用户信息保存到全局store
             setFeishuUserInfo(userInfo);
 
-            console.log('登录成功，用户信息已保存到store:', userInfo);
+            // 详细打印用户信息
+            console.log('=== 飞书用户登录成功 ===');
+            console.log('用户名:', userInfo.name || '未提供');
+            console.log('英文名:', userInfo.en_name || '未提供');
+            console.log('邮箱:', userInfo.email || '未提供或权限不足');
+            console.log('手机号:', userInfo.mobile || '未提供或权限不足');
+            console.log('用户ID:', userInfo.user_id);
+            console.log('Open ID:', userInfo.open_id);
+            console.log('Union ID:', userInfo.union_id);
+            console.log('租户键:', userInfo.tenant_key);
+            console.log('头像URL:', userInfo.avatar_url || '未提供');
+            console.log('完整用户信息对象:', userInfo);
+            console.log('========================');
+
+            // 检查邮箱权限
+            if (!userInfo.email) {
+                console.warn('⚠️ 无法获取用户邮箱，可能的原因：');
+                console.warn('1. 应用未申请邮箱权限');
+                console.warn('2. 用户未在飞书中绑定邮箱');
+                console.warn('3. 用户拒绝提供邮箱信息');
+            }
 
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : '登录失败';
@@ -122,7 +143,60 @@ export function useFeishuAuth(config: FeishuAuthConfig): UseFeishuAuthReturn {
         } finally {
             setIsLoading(false);
         }
-    }, [config, setFeishuUserInfo]);
+    }, [setFeishuUserInfo]);
+
+    // 使用code从后端获取用户信息并登录
+    const login = useCallback(async (code: string) => {
+        try {
+            setIsLoading(true);
+            setError(null);
+
+            console.log('=== 开始从后端获取用户信息 ===');
+
+            // 调用您的后端接口获取用户信息
+            const { userInfo, tokenData } = await getUserInfoFromBackend(code);
+
+            // 存储认证信息
+            storeAuthInfo(tokenData, userInfo);
+
+            // 更新本地状态
+            setUser(userInfo);
+            setAccessToken(tokenData.access_token);
+            setIsAuthenticated(true);
+
+            // 将用户信息保存到全局store
+            setFeishuUserInfo(userInfo);
+
+            // 详细打印用户信息
+            console.log('=== 飞书用户登录成功 ===');
+            console.log('用户名:', userInfo.name || '未提供');
+            console.log('英文名:', userInfo.en_name || '未提供');
+            console.log('邮箱:', userInfo.email || '未提供或权限不足');
+            console.log('手机号:', userInfo.mobile || '未提供或权限不足');
+            console.log('用户ID:', userInfo.user_id);
+            console.log('Open ID:', userInfo.open_id);
+            console.log('Union ID:', userInfo.union_id);
+            console.log('租户键:', userInfo.tenant_key);
+            console.log('头像URL:', userInfo.avatar_url || '未提供');
+            console.log('完整用户信息对象:', userInfo);
+            console.log('========================');
+
+            // 检查邮箱权限
+            if (!userInfo.email) {
+                console.warn('⚠️ 无法获取用户邮箱，可能的原因：');
+                console.warn('1. 应用未申请邮箱权限');
+                console.warn('2. 用户未在飞书中绑定邮箱');
+                console.warn('3. 用户拒绝提供邮箱信息');
+            }
+
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : '登录失败';
+            setError(errorMessage);
+            console.error('登录失败:', err);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [setFeishuUserInfo]);
 
     // 登出函数
     const logout = useCallback(() => {
@@ -156,7 +230,11 @@ export function useFeishuAuth(config: FeishuAuthConfig): UseFeishuAuthReturn {
             // 更新全局store中的用户信息
             setFeishuUserInfo(userInfo);
 
-            console.log('Token刷新成功，用户信息已更新到store:', userInfo);
+            console.log('=== Token刷新成功，用户信息已更新 ===');
+            console.log('用户名:', userInfo.name || '未提供');
+            console.log('邮箱:', userInfo.email || '未提供或权限不足');
+            console.log('更新后的完整用户信息:', userInfo);
+            console.log('====================================');
 
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : '刷新令牌失败';
@@ -178,6 +256,7 @@ export function useFeishuAuth(config: FeishuAuthConfig): UseFeishuAuthReturn {
         isLoading,
         error,
         login,
+        loginWithUserInfo,
         logout,
         refreshToken,
         clearError

@@ -1,9 +1,14 @@
+import AuthGuard from "@/components/AuthGuard";
+import HashRedirect from "@/components/HashRedirect";
 import PluginLayout from "@/components/PluginLayout";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import URLTest from "@/components/URLTest";
+import UserInfoDebug from "@/components/UserInfoDebug";
 import { useFeishuBase } from "@/hooks/use-feishu-base";
 import ConfigManager from "@/pages/ConfigManager";
 import FieldAutoComplete from "@/pages/FieldAutoComplete";
+import Login from "@/pages/Login";
 import NotFound from "@/pages/not-found";
 import PermissionManager from "@/pages/PermissionManager";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -19,25 +24,56 @@ function AppRouter() {
 
   return (
     <Switch>
-      <Route path="/">
-        <PluginLayout>
-          <FieldAutoComplete />
-        </PluginLayout>
+      {/* 公开路由 - 不需要认证 */}
+      <Route path="/login">
+        <AuthGuard requireAuth={false}>
+          <Login />
+        </AuthGuard>
+      </Route>
+      <Route path="/auth/callback">
+        <AuthGuard requireAuth={false}>
+          <Login />
+        </AuthGuard>
+      </Route>
+
+      {/* 受保护的路由 - 需要认证，自动实现免登录 */}
+      <Route path="/url-test">
+        <AuthGuard>
+          <URLTest />
+        </AuthGuard>
+      </Route>
+      <Route path="/user-info">
+        <AuthGuard>
+          <UserInfoDebug />
+        </AuthGuard>
       </Route>
       <Route path="/auto-complete">
-        <PluginLayout>
-          <FieldAutoComplete />
-        </PluginLayout>
+        <AuthGuard>
+          <PluginLayout>
+            <FieldAutoComplete />
+          </PluginLayout>
+        </AuthGuard>
       </Route>
       <Route path="/config-manager">
-        <PluginLayout>
-          <ConfigManager />
-        </PluginLayout>
+        <AuthGuard>
+          <PluginLayout>
+            <ConfigManager />
+          </PluginLayout>
+        </AuthGuard>
       </Route>
       <Route path="/permission-manager">
-        <PluginLayout>
-          <PermissionManager />
-        </PluginLayout>
+        <AuthGuard>
+          <PluginLayout>
+            <PermissionManager />
+          </PluginLayout>
+        </AuthGuard>
+      </Route>
+      <Route path="/">
+        <AuthGuard>
+          <PluginLayout>
+            <FieldAutoComplete />
+          </PluginLayout>
+        </AuthGuard>
       </Route>
       <Route component={NotFound} />
     </Switch>
@@ -61,6 +97,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
+        <HashRedirect />
         <Toaster />
         <Router hook={useHashLocation}>
           <AppRouter />

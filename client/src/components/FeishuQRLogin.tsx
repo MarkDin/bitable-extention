@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { type FeishuAuthConfig } from '@/lib/feishuAuth';
 import { Loader2, QrCode, RefreshCw } from 'lucide-react';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 // 声明全局QRLogin类型
 declare global {
@@ -40,6 +40,7 @@ const FeishuQRLogin: React.FC<FeishuQRLoginProps> = ({
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const qrLoginRef = useRef<QRLoginInstance | null>(null);
+    const messageHandlerRef = useRef<((event: MessageEvent) => void) | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string>('');
     const [isSDKLoaded, setIsSDKLoaded] = useState(false);
@@ -77,125 +78,160 @@ const FeishuQRLogin: React.FC<FeishuQRLoginProps> = ({
         loadSDK();
     }, []);
 
+    // 初始化二维码函数
+    const initQRCode = useCallback(() => {
+        try {
+            setIsLoading(true);
+            setError('');
+
+            // 安全地清空容器
+            const container = containerRef.current;
+            if (!container) {
+                console.warn('容器不存在');
+                setIsLoading(false);
+                return;
+            }
+
+            // 使用innerHTML清空容器，避免removeChild错误
+            container.innerHTML = '';
+
+            // 构建授权URL - 重定向到前端获取code
+            const CLIENT_ID = config.clientId;
+            const REDIRECT_URI = encodeURIComponent(window.location.origin + '/auth/callback');
+            const STATE = config.state || 'feishu_qr_' + Date.now();
+
+            // 将state存储到localStorage中，以便后续验证
+            localStorage.setItem('feishu_auth_state', STATE);
+
+            // 使用前端回调地址获取code
+            const authUrl = `https://passport.feishu.cn/suite/passport/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&state=${STATE}`;
+
+            console.log('=== 二维码配置信息 ===');
+            console.log('客户端ID:', CLIENT_ID);
+            console.log('重定向URI（编码前）:', window.location.origin + '/auth/callback');
+            console.log('重定向URI（编码后）:', REDIRECT_URI);
+            console.log('状态参数:', STATE);
+            console.log('完整授权URL:', authUrl);
+            console.log('======================');
+            const uniqueId = `qr-debug-container-${Date.now()}`;
+            container.id = uniqueId;
+
+            // 创建QR登录实例 - 使用固定的容器ID
+            const qrLoginInstance = window.QRLogin({
+                id: uniqueId,  // 使用固定ID，与下面的div id对应
+                goto: authUrl,
+                width: '260',  // 调整为260x260，给进度条留出空间
+                height: '260'
+            });
+
+            qrLoginRef.current = qrLoginInstance;
+
+            // 监听扫码消息
+            const messageHandler = (event: MessageEvent) => {
+                console.log('=== 收到飞书扫码消息 ===');
+                console.log('Event origin:', event.origin);
+                console.log('Event data:', event.data);
+                console.log('QR instance available:', !!qrLoginInstance);
+
+                if (qrLoginInstance.matchOrigin && qrLoginInstance.matchData) {
+                    const originMatch = qrLoginInstance.matchOrigin(event.origin);
+                    const dataMatch = qrLoginInstance.matchData(event.data);
+                    console.log('Origin match:', originMatch);
+                    console.log('Data match:', dataMatch);
+
+                    if (originMatch && dataMatch) {
+                        console.log('✅ 飞书QR匹配成功');
+                        console.log('事件数据:', event.data);
+
+                        const loginTmpCode = event.data.tmp_code;
+                        if (loginTmpCode) {
+                            console.log('🔑 收到临时授权码:', loginTmpCode);
+
+                            // 根据官方文档，需要手动重定向到授权URL + tmp_code
+                            const redirectUrl = `${authUrl}&tmp_code=${loginTmpCode}`;
+                            console.log('🔄 准备重定向到:', redirectUrl);
+
+                            // 执行重定向，这会触发飞书服务器返回302重定向到我们的callback
+                            window.location.href = redirectUrl;
+                        } else {
+                            console.error('❌ 未找到tmp_code in event.data:', event.data);
+                        }
+                    } else {
+                        console.log('飞书QR匹配失败，忽略此消息');
+                        console.log('期望的Origin匹配:', originMatch);
+                        console.log('期望的Data匹配:', dataMatch);
+                    }
+                } else {
+                    console.log('QR instance缺少匹配方法');
+                    console.log('matchOrigin存在:', !!qrLoginInstance.matchOrigin);
+                    console.log('matchData存在:', !!qrLoginInstance.matchData);
+                }
+            };
+
+            // 存储消息处理器引用
+            messageHandlerRef.current = messageHandler;
+
+            // 添加消息监听器
+            window.addEventListener('message', messageHandler);
+
+            setIsLoading(false);
+
+        } catch (err) {
+            console.error('初始化二维码失败:', err);
+            setError('初始化二维码失败，请重试');
+            setIsLoading(false);
+        }
+    }, [config, onSuccess]);
+
     // 初始化二维码
     useEffect(() => {
         if (!isSDKLoaded || !containerRef.current) return;
-
-        let messageHandler: ((event: MessageEvent) => void) | null = null;
-
-        const initQRCode = () => {
-            try {
-                setIsLoading(true);
-                setError('');
-
-                // 安全地清空容器
-                const container = containerRef.current;
-                if (container) {
-                    // 使用更安全的方式清空容器
-                    while (container.firstChild) {
-                        container.removeChild(container.firstChild);
-                    }
-                }
-
-                // 构建授权URL - 使用旧版登录流程格式
-                const CLIENT_ID = config.clientId;
-                const REDIRECT_URI = encodeURIComponent(config.redirectUri);
-                const STATE = config.state || 'feishu_qr_' + Date.now();
-
-                // 将state存储到localStorage中，以便后续验证
-                localStorage.setItem('feishu_auth_state', STATE);
-
-                // 使用旧版登录流程地址（与SimpleFeishuQR相同的格式）
-                const authUrl = `https://passport.feishu.cn/suite/passport/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&state=${STATE}`;
-
-                console.log('FeishuQRLogin - 授权URL:', authUrl);
-                console.log('FeishuQRLogin - State:', STATE);
-
-                // 创建QR登录实例 - 使用固定的容器ID
-                const qrLoginInstance = window.QRLogin({
-                    id: 'feishu-qr-container',  // 使用固定ID，与下面的div id对应
-                    goto: authUrl,
-                    width: '250',  // 固定尺寸250x250
-                    height: '250'
-                });
-
-                qrLoginRef.current = qrLoginInstance;
-
-                // 监听扫码消息
-                messageHandler = (event: MessageEvent) => {
-                    if (qrLoginInstance.matchOrigin(event.origin) && qrLoginInstance.matchData(event.data)) {
-                        const loginTmpCode = event.data.tmp_code;
-                        if (loginTmpCode) {
-                            // 构建完整的重定向URL
-                            const redirectUrl = `${authUrl}&tmp_code=${loginTmpCode}`;
-
-                            // 提取code参数（这里需要根据实际的重定向逻辑调整）
-                            // 在实际应用中，这个code会通过重定向URL返回
-                            if (onSuccess) {
-                                onSuccess(loginTmpCode);
-                            }
-                        }
-                    }
-                };
-
-                // 添加消息监听器
-                window.addEventListener('message', messageHandler);
-
-                setIsLoading(false);
-
-            } catch (err) {
-                console.error('初始化二维码失败:', err);
-                setError('初始化二维码失败，请重试');
-                setIsLoading(false);
-            }
-        };
 
         initQRCode();
 
         // 清理函数
         return () => {
+            const messageHandler = messageHandlerRef.current;
             if (messageHandler) {
                 window.removeEventListener('message', messageHandler);
+                messageHandlerRef.current = null;
             }
             // 安全地清理容器
             const container = containerRef.current;
             if (container) {
                 try {
-                    while (container.firstChild) {
-                        container.removeChild(container.firstChild);
-                    }
+                    container.innerHTML = '';
                 } catch (e) {
                     console.warn('清理容器时出错:', e);
                 }
             }
         };
-    }, [isSDKLoaded, config, onSuccess]);
+    }, [isSDKLoaded, config, onSuccess, initQRCode]);
 
     // 刷新二维码
     const refreshQRCode = () => {
-        const container = containerRef.current;
-        if (container) {
-            // 安全地清空容器
-            try {
-                while (container.firstChild) {
-                    container.removeChild(container.firstChild);
-                }
-            } catch (e) {
-                console.warn('清理容器时出错:', e);
-            }
-        }
+        if (isLoading) return; // 防止重复点击
 
-        // 强制重新加载SDK状态，触发useEffect重新执行
-        setIsSDKLoaded(false);
         setIsLoading(true);
         setError('');
 
-        // 延迟后重新设置SDK已加载状态
-        setTimeout(() => {
-            if (typeof window.QRLogin === 'function') {
-                setIsSDKLoaded(true);
+        // 清理当前的消息监听器
+        const currentHandler = messageHandlerRef.current;
+        if (currentHandler) {
+            window.removeEventListener('message', currentHandler);
+            messageHandlerRef.current = null;
+        }
+
+        // 安全地清空容器
+        const container = containerRef.current;
+        if (container) {
+            try {
+                container.innerHTML = '';
+            } catch (e) {
+                console.warn('清理容器时出错:', e);
+                setIsLoading(false);
             }
-        }, 100);
+        }
     };
 
     return (
@@ -229,7 +265,11 @@ const FeishuQRLogin: React.FC<FeishuQRLoginProps> = ({
                     <div
                         ref={containerRef}
                         id="feishu-qr-container"
-                        className="min-h-[300px] flex items-center justify-center border border-gray-200 rounded-lg bg-gray-50"
+                        className="h-[300px] w-full flex items-center justify-center border border-gray-200 rounded-lg bg-gray-50 overflow-hidden"
+                        style={{
+                            minHeight: '300px',
+                            maxHeight: '300px'
+                        }}
                     >
                         {!isSDKLoaded && !error && (
                             <div className="text-center text-gray-500">
@@ -261,4 +301,5 @@ const FeishuQRLogin: React.FC<FeishuQRLoginProps> = ({
     );
 };
 
-export default FeishuQRLogin; 
+export default FeishuQRLogin;
+

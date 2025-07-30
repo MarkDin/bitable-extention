@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useFeishuAuth } from '@/hooks/useFeishuAuth';
-import { validateState } from '@/lib/feishuAuth';
 import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { useLocation, useRoute } from 'wouter';
@@ -12,9 +11,8 @@ import { useLocation, useRoute } from 'wouter';
 // 飞书应用配置
 const FEISHU_CONFIG = {
     clientId: import.meta.env.VITE_FEISHU_CLIENT_ID || 'cli_a8848b72377ad00e',
-    redirectUri: import.meta.env.VITE_FEISHU_REDIRECT_URI || `${window.location.origin}/auth/callback`
+    redirectUri: import.meta.env.VITE_FEISHU_REDIRECT_URI || window.location.origin + '/auth/callback',
 };
-
 const Login: React.FC = () => {
     const [location, setLocation] = useLocation();
     const { toast } = useToast();
@@ -37,6 +35,10 @@ const Login: React.FC = () => {
         if (isCallbackRoute) {
             const handleCallback = async () => {
                 try {
+                    console.log('=== 进入OAuth回调处理 ===');
+                    console.log('当前URL:', window.location.href);
+                    console.log('查询参数:', window.location.search);
+
                     setLoginStatus('processing');
 
                     const urlParams = new URLSearchParams(window.location.search);
@@ -44,19 +46,25 @@ const Login: React.FC = () => {
                     const state = urlParams.get('state');
                     const error = urlParams.get('error');
 
+                    console.log('提取的参数:');
+                    console.log('- code:', code);
+                    console.log('- state:', state);
+                    console.log('- error:', error);
+
                     if (error) {
                         throw new Error(`授权失败: ${error}`);
                     }
 
                     if (!code) {
+                        console.error('❌ 未找到授权码！');
+                        console.log('所有URL参数:', Object.fromEntries(urlParams.entries()));
                         throw new Error('未收到授权码');
                     }
 
-                    if (!state || !validateState(state)) {
-                        throw new Error('状态验证失败，可能存在安全风险');
-                    }
+                    console.log('✅ 成功获取授权码:', code);
+                    console.log('状态参数:', state);
 
-                    // 执行登录
+                    // 执行登录（调用后端接口）
                     await login(code);
 
                     setLoginStatus('success');
@@ -67,9 +75,9 @@ const Login: React.FC = () => {
                         description: "欢迎使用飞书多维表格数据助手",
                     });
 
-                    // 登录成功后跳转到主页
+                    // 登录成功后跳转到用户信息页面
                     setTimeout(() => {
-                        setLocation('/');
+                        setLocation('/auto-complete');
                     }, 1500);
 
                 } catch (err) {
@@ -90,40 +98,30 @@ const Login: React.FC = () => {
         }
     }, [isCallbackRoute, login, setLocation, toast]);
 
-    // 如果已经登录，重定向到主页
+    // 添加全局URL监听，用于调试重定向
     useEffect(() => {
-        if (isAuthenticated && !isCallbackRoute) {
-            setLocation('/');
-        }
-    }, [isAuthenticated, isCallbackRoute, setLocation]);
+        console.log('=== 当前页面信息 ===');
+        console.log('当前路径:', window.location.pathname);
+        console.log('查询参数:', window.location.search);
+        console.log('完整URL:', window.location.href);
+        console.log('是否为回调路由:', isCallbackRoute);
+        console.log('==================');
+    }, [location, isCallbackRoute]);
 
-    // 处理扫码成功
+    // 如果已经登录，重定向到用户信息页面
+    useEffect(() => {
+        if (isAuthenticated) {
+            console.log('用户已登录，重定向到用户信息页面');
+            setLocation('/user-info');
+        }
+    }, [isAuthenticated, setLocation]);
+
+    // 处理扫码成功（现在扫码后会自动重定向，不需要手动处理）
     const handleQRSuccess = async (tmpCode: string) => {
-        try {
-            setLoginStatus('processing');
-
-            // 获取存储的state，如果没有则生成一个
-            let state = localStorage.getItem('feishu_auth_state');
-            if (!state) {
-                state = 'feishu_qr_' + Date.now();
-                localStorage.setItem('feishu_auth_state', state);
-            }
-
-            // 构建重定向URL - 将tmp_code作为code参数传递
-            const redirectUrl = `${FEISHU_CONFIG.redirectUri}?code=${tmpCode}&state=${state}`;
-
-            console.log('扫码成功，重定向到:', redirectUrl);
-            console.log('使用的state:', state);
-
-            // 重定向到回调处理
-            window.location.href = redirectUrl;
-
-        } catch (err) {
-            console.error('处理扫码结果失败:', err);
-            const errorMsg = err instanceof Error ? err.message : '扫码登录失败';
-            setErrorMessage(errorMsg);
-            setLoginStatus('error');
-        }
+        console.log('=== 扫码成功回调被触发（这个不应该被调用了）===');
+        console.log('收到的参数:', tmpCode);
+        // 注意：根据飞书官方文档，扫码成功后SDK会自动处理重定向
+        // 这个回调现在主要用于调试目的
     };
 
     // 处理扫码错误
@@ -151,7 +149,7 @@ const Login: React.FC = () => {
                         {loginStatus === 'processing' && (
                             <div className="space-y-4">
                                 <Loader2 className="w-12 h-12 animate-spin text-blue-500 mx-auto" />
-                                <p className="text-gray-600">正在处理登录信息...</p>
+                                <p className="text-gray-600">正在从后端获取用户信息...</p>
                             </div>
                         )}
 
@@ -160,7 +158,7 @@ const Login: React.FC = () => {
                                 <CheckCircle className="w-12 h-12 text-green-500 mx-auto" />
                                 <div>
                                     <p className="text-green-600 font-medium">登录成功！</p>
-                                    <p className="text-sm text-gray-500 mt-1">正在跳转到主页...</p>
+                                    <p className="text-sm text-gray-500 mt-1">正在跳转到用户信息页面...</p>
                                 </div>
                             </div>
                         )}
@@ -190,7 +188,7 @@ const Login: React.FC = () => {
                 {/* 应用标题 */}
                 <div className="text-center">
                     <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                        飞书多维表格数据助手
+                        多维表格数据助手
                     </h1>
                     <p className="text-gray-600">
                         使用飞书账号登录以开始使用
