@@ -97,7 +97,7 @@ const FeishuQRLogin: React.FC<FeishuQRLoginProps> = ({
 
             // 构建授权URL - 重定向到前端获取code
             const CLIENT_ID = config.clientId;
-            const REDIRECT_URI = encodeURIComponent(window.location.origin + '/auth/callback');
+            const REDIRECT_URI = encodeURIComponent(window.location.origin + '/#/auth/callback');
             const STATE = config.state || 'feishu_qr_' + Date.now();
 
             // 将state存储到localStorage中，以便后续验证
@@ -108,7 +108,7 @@ const FeishuQRLogin: React.FC<FeishuQRLoginProps> = ({
 
             console.log('=== 二维码配置信息 ===');
             console.log('客户端ID:', CLIENT_ID);
-            console.log('重定向URI（编码前）:', window.location.origin + '/auth/callback');
+            console.log('重定向URI（编码前）:', window.location.origin + '/#/auth/callback');
             console.log('重定向URI（编码后）:', REDIRECT_URI);
             console.log('状态参数:', STATE);
             console.log('完整授权URL:', authUrl);

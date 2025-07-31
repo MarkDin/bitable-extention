@@ -11,7 +11,7 @@ import { useLocation, useRoute } from 'wouter';
 // 飞书应用配置
 const FEISHU_CONFIG = {
     clientId: import.meta.env.VITE_FEISHU_CLIENT_ID || 'cli_a8848b72377ad00e',
-    redirectUri: import.meta.env.VITE_FEISHU_REDIRECT_URI || window.location.origin + '/auth/callback',
+    redirectUri: import.meta.env.VITE_FEISHU_REDIRECT_URI || window.location.origin + '/#/auth/callback',
 };
 const Login: React.FC = () => {
     const [location, setLocation] = useLocation();
@@ -36,8 +36,9 @@ const Login: React.FC = () => {
             const handleCallback = async () => {
                 try {
                     console.log('=== 进入OAuth回调处理 ===');
-                    console.log('当前URL:', window.location.href);
+                    console.log('当前URL:', window.location);
                     console.log('查询参数:', window.location.search);
+                    console.log('Hash部分:', window.location.hash);
 
                     setLoginStatus('processing');
 
@@ -112,7 +113,7 @@ const Login: React.FC = () => {
     useEffect(() => {
         if (isAuthenticated) {
             console.log('用户已登录，重定向到用户信息页面');
-            setLocation('/user-info');
+            setLocation('/auto-complete');
         }
     }, [isAuthenticated, setLocation]);
 
