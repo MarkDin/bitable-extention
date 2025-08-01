@@ -48,7 +48,7 @@ export function buildAuthUrl(config: FeishuAuthConfig): string {
 
     // 直接重定向到后端的callback接口
     const params = new URLSearchParams({
-        // client_id: config.clientId,
+        client_id: config.clientId,
         redirect_uri: 'https://crm-data-service-dk1543100966.replit.app/auth/callback',
         response_type: 'code',
         state: state
