@@ -1,7 +1,7 @@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { type FeishuAuthConfig } from '@/lib/feishuAuth';
+import { type FeishuAuthConfig, buildAuthUrl, getUserInfoByState, storeAuthInfo } from '@/lib/feishuAuth';
 import { Loader2, QrCode, RefreshCw } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -27,7 +27,7 @@ interface QRLoginInstance {
 
 interface FeishuQRLoginProps {
     config: FeishuAuthConfig;
-    onSuccess?: (code: string) => void;
+    onSuccess?: (userInfo: any) => void;
     onError?: (error: string) => void;
     className?: string;
 }
@@ -44,6 +44,7 @@ const FeishuQRLogin: React.FC<FeishuQRLoginProps> = ({
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string>('');
     const [isSDKLoaded, setIsSDKLoaded] = useState(false);
+    const [isProcessingLogin, setIsProcessingLogin] = useState(false);
 
     // 加载飞书QR SDK
     useEffect(() => {
@@ -78,6 +79,81 @@ const FeishuQRLogin: React.FC<FeishuQRLoginProps> = ({
         loadSDK();
     }, []);
 
+    // 处理扫码成功
+    const handleScanSuccess = async (tmpCode: string, state: string) => {
+        try {
+            setIsProcessingLogin(true);
+            console.log('=== 开始处理扫码登录 ===');
+            console.log('临时授权码:', tmpCode);
+            console.log('状态参数:', state);
+
+            // 构建完整的重定向URL，让飞书服务器处理并重定向到后端
+            const authUrl = buildAuthUrl(config);
+            const finalUrl = `${authUrl}&tmp_code=${tmpCode}`;
+
+            console.log('🔄 使用隐藏iframe触发后端处理:', finalUrl);
+
+            // 使用隐藏iframe触发飞书服务器处理，避免当前页面跳转
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = finalUrl;
+            document.body.appendChild(iframe);
+
+            // 等待一小段时间让iframe加载并触发重定向到后端
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            // 清理iframe
+            try {
+                document.body.removeChild(iframe);
+            } catch (e) {
+                console.warn('清理iframe失败:', e);
+            }
+
+            // 轮询后端接口获取用户信息，等待后端处理完成
+            console.log('📡 开始轮询后端接口获取用户信息...');
+            let retryCount = 0;
+            const maxRetries = 15; // 最多重试15次，每次间隔2秒，总共30秒
+            let userInfoResult = null;
+
+            while (retryCount < maxRetries) {
+                try {
+                    console.log(`📡 第${retryCount + 1}次尝试获取用户信息，state: ${state}`);
+                    userInfoResult = await getUserInfoByState(state);
+                    console.log('✅ 成功获取用户信息');
+                    break;
+                } catch (err) {
+                    retryCount++;
+                    if (retryCount >= maxRetries) {
+                        throw new Error('获取用户信息超时，请重试登录');
+                    }
+
+                    console.log(`⏳ 第${retryCount}次获取失败，2秒后重试...`);
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+            }
+
+            if (!userInfoResult) {
+                throw new Error('无法获取用户信息，请重试登录');
+            }
+
+            const { userInfo, tokenData } = userInfoResult;
+
+            // 存储认证信息
+            storeAuthInfo(tokenData, userInfo);
+
+            console.log('✅ 登录成功');
+            onSuccess?.(userInfo);
+
+        } catch (err) {
+            console.error('❌ 扫码登录处理失败:', err);
+            const errorMsg = err instanceof Error ? err.message : '登录处理失败';
+            setError(errorMsg);
+            onError?.(errorMsg);
+        } finally {
+            setIsProcessingLogin(false);
+        }
+    };
+
     // 初始化二维码函数
     const initQRCode = useCallback(() => {
         try {
@@ -95,32 +171,25 @@ const FeishuQRLogin: React.FC<FeishuQRLoginProps> = ({
             // 使用innerHTML清空容器，避免removeChild错误
             container.innerHTML = '';
 
-            // 构建授权URL - 重定向到前端获取code
-            const CLIENT_ID = config.clientId;
-            const REDIRECT_URI = encodeURIComponent(window.location.origin + '/#/auth/callback');
-            const STATE = config.state || 'feishu_qr_' + Date.now();
-
-            // 将state存储到localStorage中，以便后续验证
-            localStorage.setItem('feishu_auth_state', STATE);
-
-            // 使用前端回调地址获取code
-            const authUrl = `https://passport.feishu.cn/suite/passport/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&state=${STATE}`;
+            // 构建授权URL - 现在重定向到后端
+            const authUrl = buildAuthUrl(config);
+            const state = localStorage.getItem('feishu_auth_state') || '';
 
             console.log('=== 二维码配置信息 ===');
-            console.log('客户端ID:', CLIENT_ID);
-            console.log('重定向URI（编码前）:', window.location.origin + '/#/auth/callback');
-            console.log('重定向URI（编码后）:', REDIRECT_URI);
-            console.log('状态参数:', STATE);
+            console.log('客户端ID:', config.clientId);
+            console.log('重定向URI:', '后端处理 /auth/callback');
+            console.log('状态参数:', state);
             console.log('完整授权URL:', authUrl);
             console.log('======================');
+
             const uniqueId = `qr-debug-container-${Date.now()}`;
             container.id = uniqueId;
 
-            // 创建QR登录实例 - 使用固定的容器ID
+            // 创建QR登录实例
             const qrLoginInstance = window.QRLogin({
-                id: uniqueId,  // 使用固定ID，与下面的div id对应
+                id: uniqueId,
                 goto: authUrl,
-                width: '260',  // 调整为260x260，给进度条留出空间
+                width: '260',
                 height: '260'
             });
 
@@ -131,7 +200,6 @@ const FeishuQRLogin: React.FC<FeishuQRLoginProps> = ({
                 console.log('=== 收到飞书扫码消息 ===');
                 console.log('Event origin:', event.origin);
                 console.log('Event data:', event.data);
-                console.log('QR instance available:', !!qrLoginInstance);
 
                 if (qrLoginInstance.matchOrigin && qrLoginInstance.matchData) {
                     const originMatch = qrLoginInstance.matchOrigin(event.origin);
@@ -141,30 +209,16 @@ const FeishuQRLogin: React.FC<FeishuQRLoginProps> = ({
 
                     if (originMatch && dataMatch) {
                         console.log('✅ 飞书QR匹配成功');
-                        console.log('事件数据:', event.data);
 
                         const loginTmpCode = event.data.tmp_code;
                         if (loginTmpCode) {
                             console.log('🔑 收到临时授权码:', loginTmpCode);
-
-                            // 根据官方文档，需要手动重定向到授权URL + tmp_code
-                            const redirectUrl = `${authUrl}&tmp_code=${loginTmpCode}`;
-                            console.log('🔄 准备重定向到:', redirectUrl);
-
-                            // 执行重定向，这会触发飞书服务器返回302重定向到我们的callback
-                            window.location.href = redirectUrl;
+                            // 处理扫码成功，传入状态参数
+                            handleScanSuccess(loginTmpCode, state);
                         } else {
                             console.error('❌ 未找到tmp_code in event.data:', event.data);
                         }
-                    } else {
-                        console.log('飞书QR匹配失败，忽略此消息');
-                        console.log('期望的Origin匹配:', originMatch);
-                        console.log('期望的Data匹配:', dataMatch);
                     }
-                } else {
-                    console.log('QR instance缺少匹配方法');
-                    console.log('matchOrigin存在:', !!qrLoginInstance.matchOrigin);
-                    console.log('matchData存在:', !!qrLoginInstance.matchData);
                 }
             };
 
@@ -181,7 +235,7 @@ const FeishuQRLogin: React.FC<FeishuQRLoginProps> = ({
             setError('初始化二维码失败，请重试');
             setIsLoading(false);
         }
-    }, [config, onSuccess]);
+    }, [config, onSuccess, onError]);
 
     // 初始化二维码
     useEffect(() => {
@@ -206,11 +260,11 @@ const FeishuQRLogin: React.FC<FeishuQRLoginProps> = ({
                 }
             }
         };
-    }, [isSDKLoaded, config, onSuccess, initQRCode]);
+    }, [isSDKLoaded, initQRCode]);
 
     // 刷新二维码
     const refreshQRCode = () => {
-        if (isLoading) return; // 防止重复点击
+        if (isLoading || isProcessingLogin) return; // 防止重复点击
 
         setIsLoading(true);
         setError('');
@@ -227,6 +281,8 @@ const FeishuQRLogin: React.FC<FeishuQRLoginProps> = ({
         if (container) {
             try {
                 container.innerHTML = '';
+                // 重新初始化
+                setTimeout(() => initQRCode(), 100);
             } catch (e) {
                 console.warn('清理容器时出错:', e);
                 setIsLoading(false);
@@ -253,11 +309,13 @@ const FeishuQRLogin: React.FC<FeishuQRLoginProps> = ({
                 )}
 
                 <div className="relative">
-                    {isLoading && (
+                    {(isLoading || isProcessingLogin) && (
                         <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-10">
                             <div className="flex flex-col items-center gap-2">
                                 <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-                                <span className="text-sm text-gray-600">加载中...</span>
+                                <span className="text-sm text-gray-600">
+                                    {isProcessingLogin ? '正在登录...' : '加载中...'}
+                                </span>
                             </div>
                         </div>
                     )}
@@ -285,7 +343,7 @@ const FeishuQRLogin: React.FC<FeishuQRLoginProps> = ({
                         variant="outline"
                         size="sm"
                         onClick={refreshQRCode}
-                        disabled={isLoading}
+                        disabled={isLoading || isProcessingLogin}
                         className="w-full"
                     >
                         <RefreshCw className="w-4 h-4 mr-2" />

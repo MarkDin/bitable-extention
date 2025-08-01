@@ -41,21 +41,22 @@ export function generateState(): string {
     return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 }
 
-// 构建授权URL
+// 构建授权URL - 直接重定向到后端
 export function buildAuthUrl(config: FeishuAuthConfig): string {
     const state = config.state || generateState();
     localStorage.setItem('feishu_auth_state', state);
 
-    // 严格按照飞书官方文档格式构建URL
+    // 直接重定向到后端的callback接口
     const params = new URLSearchParams({
-        client_id: config.clientId,
-        redirect_uri: config.redirectUri,
+        // client_id: config.clientId,
+        redirect_uri: 'https://crm-data-service-dk1543100966.replit.app/auth/callback',
         response_type: 'code',
         state: state
     });
+
     console.log('login params', params.toString());
-    console.log('redirect_uri', config.redirectUri);
-    // 使用正确的飞书扫码登录端点
+    console.log('redirect_uri (后端)', 'https://crm-data-service-dk1543100966.replit.app/auth/callback');
+
     return `https://passport.feishu.cn/suite/passport/oauth/authorize?${params.toString()}`;
 }
 
@@ -65,7 +66,76 @@ export function validateState(returnedState: string): boolean {
     return storedState === returnedState;
 }
 
-// 从您的后端接口获取用户信息
+// 通过state参数从后端获取用户信息
+export async function getUserInfoByState(state: string): Promise<{ userInfo: FeishuUserInfo, tokenData: FeishuTokenResponse }> {
+    console.log('=== 通过state从后端获取用户信息 ===');
+    console.log('state参数:', state);
+
+    const response = await fetch(`https://crm-data-service-dk1543100966.replit.app/feishu/user_info?state=${encodeURIComponent(state)}`, {
+        method: 'GET',
+        headers: {
+            'Accept': 'application/json',
+        }
+    });
+
+    console.log('后端API响应状态:', response.status);
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error('后端API错误响应:', errorText);
+        throw new Error(`获取用户信息失败: HTTP ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log('后端API完整响应:', data);
+
+    // 检查响应是否成功
+    if (!data.success) {
+        throw new Error(`后端返回错误: ${data.error || '未知错误'}`);
+    }
+
+    // 检查数据结构
+    if (!data.data || !data.data.user_info || !data.data.token_info) {
+        throw new Error('后端返回数据格式不正确，缺少必要字段');
+    }
+
+    // 转换为我们期望的格式
+    const userInfo: FeishuUserInfo = {
+        name: data.data.user_info.name,
+        en_name: data.data.user_info.en_name,
+        avatar_url: data.data.user_info.avatar_url,
+        avatar_thumb: data.data.user_info.avatar_thumb,
+        avatar_middle: data.data.user_info.avatar_middle,
+        avatar_big: data.data.user_info.avatar_big,
+        open_id: data.data.user_info.open_id,
+        union_id: data.data.user_info.union_id,
+        user_id: data.data.user_info.user_id,
+        tenant_key: data.data.user_info.tenant_key,
+        email: data.data.user_info.email || '',
+        mobile: data.data.user_info.mobile || ''
+    };
+
+    const tokenData: FeishuTokenResponse = {
+        access_token: data.data.token_info.access_token,
+        token_type: data.data.token_info.token_type,
+        expires_in: data.data.token_info.expires_in,
+        scope: data.data.token_info.scope,
+        refresh_token: '', // 后端没有返回refresh_token，设为空字符串
+    };
+
+    console.log('✅ 解析后的用户信息:', userInfo);
+    console.log('✅ 解析后的token信息:', {
+        ...tokenData,
+        access_token: tokenData.access_token.substring(0, 20) + '...' // 只显示前20位
+    });
+
+    return {
+        userInfo,
+        tokenData
+    };
+}
+
+// 从您的后端接口获取用户信息（保留原函数以备兼容）
 export async function getUserInfoFromBackend(code: string): Promise<{ userInfo: FeishuUserInfo, tokenData: FeishuTokenResponse }> {
     console.log('=== 从后端获取用户信息 ===');
     console.log('授权码:', code);
