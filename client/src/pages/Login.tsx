@@ -134,16 +134,12 @@ const Login: React.FC = () => {
                 description: `欢迎，${userInfo.name}！即将跳转到主页面...`,
             });
 
-            // 方案1：立即跳转，不依赖useFeishuAuth的自动检测
+            // 优化后的跳转方案：无刷新跳转
             console.log('开始跳转到 /auto-complete...');
-            // 使用 window.location.hash 直接跳转，强制触发路由更新
-            window.location.hash = '#/auto-complete';
-            window.location.reload();
 
-            // 备用方案：延迟刷新页面确保认证状态更新
+            // 短暂延迟，确保localStorage监听器能够检测到变化并更新认证状态
             // setTimeout(() => {
-            //     window.location.hash = '#/auto-complete';
-            //     window.location.reload();
+            //     setLocation('/auto-complete');
             // }, 100);
 
         } catch (error) {

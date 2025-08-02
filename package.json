@@ -6,7 +6,7 @@
   "description": "飞书多维表格数据助手 - 纯前端实现的插件",
   "output": "dist",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --mode dev",
     "start": "vite --host 0.0.0.0",
     "build": "vite build",
     "preview": "vite preview",

@@ -73,6 +73,74 @@ export function useFeishuAuth(config: FeishuAuthConfig): UseFeishuAuthReturn {
         initAuth();
     }, [setFeishuUserInfo]);
 
+    // 监听localStorage变化，实时更新认证状态
+    useEffect(() => {
+        const handleStorageChange = (e: StorageEvent) => {
+            // 只监听飞书相关的localStorage变化
+            if (e.key && (
+                e.key === 'feishu_access_token' ||
+                e.key === 'feishu_user_info' ||
+                e.key === 'feishu_token_expires_at'
+            )) {
+                console.log('检测到localStorage变化:', e.key);
+
+                // 重新检查认证状态
+                if (isLoggedIn()) {
+                    const storedUser = getStoredUserInfo();
+                    const storedToken = getStoredAccessToken();
+
+                    if (storedUser && storedToken) {
+                        setUser(storedUser);
+                        setAccessToken(storedToken);
+                        setIsAuthenticated(true);
+                        setFeishuUserInfo(storedUser);
+                        console.log('✅ 检测到新的登录状态，已更新认证状态');
+                    }
+                } else {
+                    // 如果检测到登录信息被清除
+                    setUser(null);
+                    setAccessToken(null);
+                    setIsAuthenticated(false);
+                    console.log('检测到登录信息被清除');
+                }
+            }
+        };
+
+        // 监听同一页面内的localStorage变化
+        const handleManualStorageChange = () => {
+            // 检查当前登录状态与localStorage是否一致
+            const currentLoggedIn = isLoggedIn();
+            if (currentLoggedIn !== isAuthenticated) {
+                if (currentLoggedIn) {
+                    const storedUser = getStoredUserInfo();
+                    const storedToken = getStoredAccessToken();
+                    if (storedUser && storedToken) {
+                        setUser(storedUser);
+                        setAccessToken(storedToken);
+                        setIsAuthenticated(true);
+                        setFeishuUserInfo(storedUser);
+                        console.log('✅ 手动检测到新的登录状态，已更新认证状态');
+                    }
+                } else {
+                    setUser(null);
+                    setAccessToken(null);
+                    setIsAuthenticated(false);
+                }
+            }
+        };
+
+        // 添加storage事件监听器（跨页面）
+        window.addEventListener('storage', handleStorageChange);
+
+        // 定期检查localStorage状态变化（同页面内）
+        const interval = setInterval(handleManualStorageChange, 1000);
+
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+            clearInterval(interval);
+        };
+    }, [isAuthenticated, setFeishuUserInfo]);
+
     // 检查token是否过期并自动刷新
     useEffect(() => {
         if (!isAuthenticated || !accessToken) return;
