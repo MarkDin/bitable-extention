@@ -4,7 +4,7 @@ const sendUrl = 'https://open.feishu.cn/open-apis/bot/v2/hook/5b3ac02c-c18f-4263
 // 请在飞书开放平台的搭建工具中创建卡片模板，并替换以下配置
 const CARD_TEMPLATE_CONFIG = {
     template_id: 'AAqIYhbgzY69r', // 请替换为实际的模板ID，在搭建工具中复制卡片模板ID获取
-    template_version_name: '1.0.0' // 请替换为实际的版本号，若不填将使用最新版本
+    template_version_name: '1.0.3' // 请替换为实际的版本号，若不填将使用最新版本
 };
 
 // 模板变量映射配置
@@ -15,7 +15,8 @@ const TEMPLATE_VARIABLES = {
     START_TIME: 'start_time',        // 补全开始时间
     END_TIME: 'end_time',          // 补全结束时间
     COMPLETE_RESULT: 'complete_result',   // 补全结果
-    DOC_LINK: 'doc_link'           // 多维表格链接
+    DOC_LINK: 'doc_link',           // 多维表格链接
+    USER_OPEN_ID: 'user',    // 用户Open ID
 };
 
 // 操作日志接口定义
@@ -34,6 +35,9 @@ interface OperationLog {
     bitableUrl: string;
     tableName: string;
     tableId: string;
+    user: {
+        id: string;
+    };
 }
 
 /**
@@ -125,7 +129,10 @@ export async function sendOperationLogToFeishu(log: OperationLog): Promise<boole
                         [TEMPLATE_VARIABLES.START_TIME]: formatTime(log.submitTime),        // 补全开始时间
                         [TEMPLATE_VARIABLES.END_TIME]: formatTime(log.endTime),             // 补全结束时间
                         [TEMPLATE_VARIABLES.COMPLETE_RESULT]: getCompleteResultText(log.completionResult), // 补全结果
-                        [TEMPLATE_VARIABLES.DOC_LINK]: log.bitableUrl                       // 多维表格链接
+                        [TEMPLATE_VARIABLES.DOC_LINK]: log.bitableUrl,                      // 多维表格链接
+                        [TEMPLATE_VARIABLES.USER_OPEN_ID]: {
+                            id: log.user.id,
+                        }                 // 用户Open ID
                     }
                 }
             }
@@ -231,7 +238,10 @@ export async function testCardTemplate(): Promise<boolean> {
         },
         bitableUrl: 'https://example.com/test-table',
         tableName: '测试表格',
-        tableId: 'test_table_id'
+        tableId: 'test_table_id',
+        user: {
+            id: 'test_open_id_123',
+        }
     };
 
     console.log('[SendLarkMessage] 发送测试卡片...');

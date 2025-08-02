@@ -6,9 +6,10 @@ import { autoCompleteFields } from "@/lib/autoCompleteHelper";
 import { QueryType } from "@/lib/dataSync";
 import { getFieldsConfig } from "@/lib/fieldsConfigService";
 import { cn } from "@/lib/utils";
-import { Field } from "@/types/common";
+import { Field, TableField, TableFieldConfig } from "@/types/common";
 import { bitable } from "@lark-base-open/js-sdk";
 import { useQuery } from "@tanstack/react-query";
+import { BookOpen, MessageSquare } from 'lucide-react';
 import { useEffect, useState } from "react";
 import AutoCompleteProgress from "./AutoCompleteProgress";
 import AutoCompleteResult from "./AutoCompleteResult";
@@ -142,6 +143,7 @@ const FieldAutoComplete = () => {
 
   // 初始化字段数据
   const [fields, setFields] = useState<Field[]>([]);
+  const [tableFields, setTableFields] = useState<TableField[]>([]); // 当前表格的字段列表
   const { toast } = useToast();
   const {
     selection,
@@ -161,31 +163,157 @@ const FieldAutoComplete = () => {
   const [progressData, setProgressData] = useState({ completed: 0, total: 0 });
   const [completionResult, setCompletionResult] = useState<CompletionResult | null>(null);
 
-  // 字段匹配函数：检查哪些字段在当前表格中已存在
+  // 表格配置相关状态
+  const [currentTableId, setCurrentTableId] = useState<string>("");
+
+  // 表格配置管理函数
+  const getTableConfigKey = (tableId: string) => `table_field_config_${tableId}`;
+
+  // 保存表格字段配置
+  const saveTableFieldConfig = async (tableId: string, tableName: string, fields: Field[]) => {
+    try {
+      const config: TableFieldConfig = {
+        tableId,
+        tableName,
+        fieldConfigs: fields.map(field => ({
+          fieldId: field.id,
+          fieldName: field.name,
+          isChecked: field.isChecked,
+          targetFieldId: field.targetFieldId,
+          targetFieldName: field.targetFieldName,
+          mappingType: field.mappingType || 'new'
+        })),
+        lastUpdated: new Date().toISOString()
+      };
+
+      const configKey = getTableConfigKey(tableId);
+      await bitable.bridge.setData(configKey, JSON.stringify(config));
+
+      console.log('[FieldAutoComplete] 表格配置已保存:', { tableId, tableName, configCount: config.fieldConfigs.length });
+    } catch (error) {
+      console.error('[FieldAutoComplete] 保存表格配置失败:', error);
+    }
+  };
+
+  // 加载表格字段配置
+  const loadTableFieldConfig = async (tableId: string): Promise<TableFieldConfig | null> => {
+    try {
+      const configKey = getTableConfigKey(tableId);
+      const configData = await bitable.bridge.getData(configKey);
+
+      if (configData && typeof configData === 'string') {
+        const config: TableFieldConfig = JSON.parse(configData);
+        console.log('[FieldAutoComplete] 加载表格配置成功:', { tableId, configCount: config.fieldConfigs.length });
+        return config;
+      }
+
+      console.log('[FieldAutoComplete] 没有找到表格配置:', tableId);
+      return null;
+    } catch (error) {
+      console.error('[FieldAutoComplete] 加载表格配置失败:', error);
+      return null;
+    }
+  };
+
+  // 获取表格字段列表
+  const getTableFields = async (currentTableInstance: any): Promise<TableField[]> => {
+    try {
+      if (!currentTableInstance) return [];
+
+      const allFields = await currentTableInstance.getFieldList();
+      const tableFieldsList: TableField[] = [];
+
+      for (const field of allFields) {
+        const fieldName = await field.getName();
+        const fieldType = await field.getType();
+        // const fieldId = await field.getId();
+
+        tableFieldsList.push({
+          id: field.id,
+          name: fieldName,
+          type: fieldType
+        });
+      }
+
+      console.log('[FieldAutoComplete] 当前表格字段:', tableFieldsList);
+      console.log('[FieldAutoComplete] 表格字段数量:', tableFieldsList.length);
+      return tableFieldsList;
+    } catch (error) {
+      console.error('[FieldAutoComplete] 获取表格字段失败:', error);
+      return [];
+    }
+  };
+
+  // 字段匹配函数：优先加载保存的配置，否则基于字段名称匹配
   const matchExistingFields = async (fieldsToMatch: Field[], currentTableInstance: any) => {
     try {
       if (!currentTableInstance || !fieldsToMatch.length) return fieldsToMatch;
 
-      // 获取所有字段名称
-      const allFields = await currentTableInstance.getFieldList();
-      const fieldNames = new Set<string>();
+      // 获取表格ID和字段
+      const tableName = await currentTableInstance.getName();
+      const tableId = `table_${tableName}`.replace(/[^a-zA-Z0-9_]/g, '_');
+      setCurrentTableId(tableId);
 
-      for (const field of allFields) {
-        const fieldName = await field.getName();
-        fieldNames.add(fieldName);
-      }
+      const currentTableFields = await getTableFields(currentTableInstance);
+      setTableFields(currentTableFields);
 
-      console.log('[FieldAutoComplete] 当前表格字段:', Array.from(fieldNames));
+      // 尝试加载保存的配置
+      const savedConfig = await loadTableFieldConfig(tableId);
 
-      // 更新字段状态，将已存在的字段设置为选中且禁用
+      // 创建字段名称映射（用于fallback）
+      const fieldNameMap = new Map<string, TableField>();
+      currentTableFields.forEach(field => {
+        fieldNameMap.set(field.name, field);
+      });
+
+      console.log('[FieldAutoComplete] 表格ID:', tableId);
+      console.log('[FieldAutoComplete] 是否有保存配置:', !!savedConfig);
+      console.log('[FieldAutoComplete] 字段名称映射:', Array.from(fieldNameMap.keys()));
+
+      // 更新字段状态，优先使用保存的配置
       return fieldsToMatch.map(field => {
-        const isExistingField = fieldNames.has(field.name);
-        return {
-          ...field,
-          isChecked: isExistingField ? true : field.isChecked,
-          isDisabled: isExistingField,
-          helperText: isExistingField ? '已有字段默认选中' : undefined
-        };
+        // 首先查找保存的配置
+        const savedFieldConfig = savedConfig?.fieldConfigs.find(fc => fc.fieldId === field.id);
+
+        if (savedFieldConfig) {
+          // 使用保存的配置
+          console.log('[FieldAutoComplete] 使用保存配置:', savedFieldConfig.fieldName);
+
+          // 验证目标字段是否仍然存在
+          const targetFieldExists = savedFieldConfig.targetFieldId ?
+            currentTableFields.some(tf => tf.id === savedFieldConfig.targetFieldId) : false;
+
+          return {
+            ...field,
+            isChecked: savedFieldConfig.isChecked,
+            targetFieldId: targetFieldExists ? savedFieldConfig.targetFieldId : undefined,
+            targetFieldName: targetFieldExists ? savedFieldConfig.targetFieldName : undefined,
+            mappingType: targetFieldExists ? savedFieldConfig.mappingType : 'new' as const,
+            helperText: savedFieldConfig.isChecked ? '使用上次配置' : undefined,
+            // 警告状态
+            hasWarning: field.name === '电话' || field.name.includes('电话'),
+            warningMessage: (field.name === '电话' || field.name.includes('电话')) ? '请注意检查你有表格编辑权限' : undefined
+          };
+        } else {
+          // 没有保存配置，使用名称匹配（原逻辑）
+          const existingField = fieldNameMap.get(field.name);
+          const isExistingField = !!existingField;
+
+          console.log('[FieldAutoComplete] 使用名称匹配:', field.name, isExistingField ? '找到同名字段' : '无同名字段');
+
+          return {
+            ...field,
+            isChecked: isExistingField ? true : field.isChecked,
+            isDisabled: false,
+            helperText: isExistingField ? '已有同名字段' : undefined,
+            targetFieldId: isExistingField ? existingField.id : undefined,
+            targetFieldName: isExistingField ? existingField.name : undefined,
+            mappingType: isExistingField ? 'existing' as const : 'new' as const,
+            // 警告状态
+            hasWarning: field.name === '电话' || field.name.includes('电话'),
+            warningMessage: (field.name === '电话' || field.name.includes('电话')) ? '请注意检查你有表格编辑权限' : undefined
+          };
+        }
       });
     } catch (error) {
       console.error('[FieldAutoComplete] 匹配字段失败:', error);
@@ -200,10 +328,13 @@ const FieldAutoComplete = () => {
 
       // 如果当前有表格，立即进行字段匹配
       if (currentTable) {
+        console.log('[FieldAutoComplete] 字段配置加载，开始匹配现有表格字段');
         matchExistingFields(fieldsConfigData, currentTable).then(matchedFields => {
+          console.log('[FieldAutoComplete] 初始字段匹配完成');
           setFields(matchedFields);
         });
       } else {
+        console.log('[FieldAutoComplete] 没有当前表格，直接设置字段配置');
         setFields(fieldsConfigData);
       }
     }
@@ -223,23 +354,47 @@ const FieldAutoComplete = () => {
 
   // 处理字段选择变化
   const handleFieldChange = (id: string, checked: boolean) => {
-    setFields(prev => prev.map(field =>
-      field.id === id ? { ...field, isChecked: checked } : field
-    ));
+    setFields(prev => prev.map(field => {
+      if (field.id === id) {
+        const updatedField = { ...field, isChecked: checked };
+
+        // 如果是新勾选的字段且没有预设映射，设置默认映射为新增列
+        if (checked && !field.targetFieldId) {
+          updatedField.mappingType = 'new';
+          updatedField.targetFieldId = undefined;
+          updatedField.targetFieldName = undefined;
+        }
+        // 如果取消勾选，清除映射信息
+        else if (!checked) {
+          updatedField.mappingType = 'new';
+          updatedField.targetFieldId = undefined;
+          updatedField.targetFieldName = undefined;
+        }
+
+        return updatedField;
+      }
+      return field;
+    }));
   };
 
-  // 处理全选
-  const handleSelectAll = (checked: boolean) => {
+  // 处理字段映射变化
+  const handleFieldMappingChange = (
+    fieldId: string,
+    targetFieldId?: string,
+    targetFieldName?: string,
+    mappingType?: 'existing' | 'new'
+  ) => {
     setFields(prev => prev.map(field =>
-      field.isDisabled ? field : { ...field, isChecked: checked }
+      field.id === fieldId
+        ? {
+          ...field,
+          targetFieldId,
+          targetFieldName,
+          mappingType
+        }
+        : field
     ));
   };
-
-  // 计算全选状态
-  const selectableFields = fields.filter(f => !f.isDisabled);
-  const selectedCount = selectableFields.filter(f => f.isChecked).length;
-  const isAllSelected = selectableFields.length > 0 && selectedCount === selectableFields.length;
-  const isPartiallySelected = selectedCount > 0 && selectedCount < selectableFields.length;
 
   // 移除了 tableChanged 相关的逻辑，因为现在使用了更好的字段匹配机制
 
@@ -269,8 +424,14 @@ const FieldAutoComplete = () => {
         const table = await bitable.base.getActiveTable();
         if (table && typeof table.getName === "function") {
           const name = await table.getName();
+          // 使用表格名称作为唯一标识符，确保同一表格每次都有相同ID
+          const tableId = `table_${name}`.replace(/[^a-zA-Z0-9_]/g, '_');
+
           setTableName(name);
           setCurrentTable(table);
+          setCurrentTableId(tableId);
+
+          console.log('[FieldAutoComplete] 表格切换 - ID:', tableId, '名称:', name);
 
           // 获取有序的字段列表（通过视图获取）- 更新第一列字段信息
           const activeView = await table.getActiveView();
@@ -285,12 +446,19 @@ const FieldAutoComplete = () => {
             const firstField = await table.getFieldById(firstFieldId);
             const firstFieldName = await firstField.getName();
             setFirstColumnFieldName(firstFieldName);
-            console.log('[FieldAutoComplete] 表格切换，A列字段ID:', firstFieldId, '字段名称:', firstFieldName);
+            console.log('[FieldAutoComplete] A列字段ID:', firstFieldId, '字段名称:', firstFieldName);
           }
 
           // 如果已有字段配置，进行字段匹配
           if (fields.length > 0) {
+            console.log('[FieldAutoComplete] 开始匹配表格字段，字段数量:', fields.length);
             const matchedFields = await matchExistingFields(fields, table);
+            console.log('[FieldAutoComplete] 字段匹配完成，结果:', matchedFields.map(f => ({
+              name: f.name,
+              isChecked: f.isChecked,
+              mappingType: f.mappingType,
+              targetFieldName: f.targetFieldName
+            })));
             setFields(matchedFields);
           }
         } else {
@@ -298,6 +466,7 @@ const FieldAutoComplete = () => {
           setFirstColumnFieldId("");
           setFirstColumnFieldName("");
           setCurrentTable(null);
+          setCurrentTableId("");
         }
       } catch (error) {
         console.error('[FieldAutoComplete] 处理表格切换失败:', error);
@@ -305,6 +474,7 @@ const FieldAutoComplete = () => {
         setFirstColumnFieldId("");
         setFirstColumnFieldName("");
         setCurrentTable(null);
+        setCurrentTableId("");
       }
     };
 
@@ -342,6 +512,17 @@ const FieldAutoComplete = () => {
           title: "请选择要补全的字段",
         });
         return;
+      }
+
+      // 保存当前表格的字段配置
+      if (currentTableId && tableName) {
+        console.log('[FieldAutoComplete] 保存表格配置，表格ID:', currentTableId);
+        await saveTableFieldConfig(currentTableId, tableName, fields);
+
+        toast({
+          title: "配置已保存",
+          description: "当前表格的字段配置已保存，下次打开时将自动应用。",
+        });
       }
 
       // 切换到进度页面
@@ -465,73 +646,110 @@ const FieldAutoComplete = () => {
     );
   }
 
-  // 默认表单页面 - 使用新的 UI 组件
+  // 默认表单页面 - 新的UI设计
   return (
-    <div className="w-full h-full bg-white flex flex-col">
-      {/* 内容区域 */}
-      <div className="flex-1 flex flex-col px-3 sm:px-4 md:px-5 py-4 gap-4 overflow-y-auto">
-        {/* 条件设置 */}
-        <div className="flex flex-col gap-2.5">
-          <div className="flex items-center gap-[5px] flex-wrap">
-            <span className="text-sm font-medium text-[#1d2129]">当</span>
-
-            <div className="bg-[#f2f3f5] border-0 h-[30px] px-3 py-1 rounded-sm flex items-center text-sm text-[#1d2129] w-auto">
-              <span>{tableName || '未获取到表格名称'}</span>
-            </div>
-
-            <span className="text-sm font-medium text-[#1d2129]">中的</span>
-
-            <div className="bg-[#f2f3f5] border-0 h-[30px] px-3 py-1 rounded-sm flex items-center text-sm text-[#1d2129] w-auto">
-              <span>{firstColumnFieldName || '...'}</span>
-            </div>
-
-            <span className="text-sm font-medium text-[#1d2129]">字段</span>
-          </div>
-
-          <div className="flex items-center gap-[5px] flex-wrap">
-            <span className="text-sm font-medium text-[#1d2129]">内容是</span>
-
-            <div className="bg-[#f2f3f5] h-[30px] px-3 py-1 rounded-sm flex items-center w-auto">
-              <span className="text-sm text-[#1d2129]">
-                {/* {queryType === QueryType.CUSTOMER ? '客户简称' : '订单ID'} */}
-                订单号，例如：IN20240404
-              </span>
-            </div>
-
-            <span className="text-base font-medium text-[#1d2129]">时，</span>
+    <div className="w-full h-full bg-[#f8f9fa] flex flex-col">
+      {/* 标题区域 */}
+      <div className="bg-white border-b border-[#e4e7ec] px-6 py-4">
+        <div className="flex items-center justify-between">
+          <h1 className="text-lg font-semibold text-[#101828]">帮助与反馈</h1>
+          <div className="flex items-center gap-3">
+            <button className="flex items-center gap-2 px-3 py-1.5 text-sm text-[#475467] hover:text-[#344054] hover:bg-[#f9fafb] rounded-md transition-colors">
+              <BookOpen className="h-4 w-4" />
+              查看使用手册
+            </button>
+            <button className="flex items-center gap-2 px-3 py-1.5 text-sm text-[#165dff] hover:text-[#1570ef] hover:bg-[#f5f8ff] rounded-md transition-colors">
+              <MessageSquare className="h-4 w-4" />
+              加入群聊反馈
+            </button>
           </div>
         </div>
+      </div>
 
-        {/* 字段选择 */}
-        {/* <div className="text-sm text-gray-500 mb-2">将以下勾选的字段数据同步到表格中</div> */}
-        <FieldsSection
-          fields={fields}
-          onFieldChange={handleFieldChange}
-          onSelectAll={handleSelectAll}
-          isAllSelected={isAllSelected}
-          isPartiallySelected={isPartiallySelected}
-        />
+      {/* 内容区域 */}
+      <div className="flex-1 px-6 py-6 overflow-y-auto">
+        <div className="space-y-6">
+          {/* 配置查询条件 - 精确匹配Figma设计 */}
+          <div className="bg-white rounded-lg border border-[#e4e7ec] p-4">
+            <h2 className="text-sm font-medium text-[#344054] mb-3">配置查询条件</h2>
+            <div className="p-2.5 bg-gray-100 rounded-lg outline outline-1 outline-offset-[-1px] outline-black/5 flex flex-col justify-center items-start gap-2.5 min-h-[8rem]">
+              <div className="w-full flex flex-wrap justify-start items-center gap-[5px]">
+                <div className="justify-center text-neutral-800 text-sm font-medium font-['PingFang_SC'] leading-snug">当</div>
+                <div className="flex-1 min-w-[140px] max-w-[200px] px-3 py-1 bg-white rounded-md outline outline-1 outline-offset-[-1px] outline-black/10 flex justify-start items-center gap-1.5">
+                  <div className="flex-1 py-px flex justify-start items-center overflow-hidden">
+                    <div className="justify-start text-zinc-800 text-sm font-normal font-['PingFang_SC'] leading-snug truncate">
+                      {tableName || '欧洲一区项目跟进表'}
+                    </div>
+                  </div>
+                  <div className="size-3 inline-flex flex-col justify-center items-center overflow-hidden shrink-0">
+                    <div className="size-3 relative overflow-hidden">
+                      <div className="size-1.5 left-[6.01px] top-[8.96px] absolute origin-top-left rotate-[-135deg] bg-black/10"></div>
+                    </div>
+                  </div>
+                </div>
+                <div className="justify-center text-neutral-800 text-sm font-medium font-['PingFang_SC'] leading-snug">中的</div>
+                <div className="flex-1 min-w-[80px] max-w-[120px] px-3 py-1 bg-white rounded-md outline outline-1 outline-offset-[-1px] outline-black/10 flex justify-start items-center gap-1">
+                  <div className="flex-1 py-px flex justify-start items-center overflow-hidden">
+                    <div className="justify-start text-zinc-800 text-sm font-normal font-['PingFang_SC'] leading-snug truncate">
+                      {firstColumnFieldName || 'PI订单号'}
+                    </div>
+                  </div>
+                  <div className="size-3 inline-flex flex-col justify-center items-center overflow-hidden shrink-0">
+                    <div className="size-3 relative overflow-hidden">
+                      <div className="size-1.5 left-[6.01px] top-[8.96px] absolute origin-top-left rotate-[-135deg] bg-black/10"></div>
+                    </div>
+                  </div>
+                </div>
+                <div className="justify-center text-neutral-800 text-sm font-medium font-['PingFang_SC'] leading-snug">字段</div>
+              </div>
+              <div className="w-full flex flex-wrap justify-start items-center gap-[5px]">
+                <div className="justify-center text-neutral-800 text-sm font-medium font-['PingFang_SC'] leading-snug">内容是</div>
+                <div className="flex-1 min-w-[180px] max-w-[280px] px-3 py-1 bg-white rounded-md outline outline-1 outline-offset-[-1px] outline-black/10 flex justify-start items-center gap-1">
+                  <div className="flex-1 py-px flex justify-start items-center overflow-hidden">
+                    <div className="justify-start text-zinc-800 text-sm font-normal font-['PingFang_SC'] leading-snug truncate">订单号，例如：IN20240404</div>
+                  </div>
+                  <div className="size-3 inline-flex flex-col justify-center items-center overflow-hidden shrink-0">
+                    <div className="size-3 relative overflow-hidden">
+                      <div className="size-1.5 left-[6.01px] top-[8.96px] absolute origin-top-left rotate-[-135deg] bg-black/10"></div>
+                    </div>
+                  </div>
+                </div>
+                <div className="justify-center text-neutral-800 text-base font-medium font-['PingFang_SC'] leading-normal">时，</div>
+              </div>
+              <div className="w-full flex justify-start text-neutral-800 text-sm font-medium font-['PingFang_SC'] leading-snug">将以下勾选的字段数据同步到表格中</div>
+            </div>
+          </div>
+
+          {/* 字段选择区域 */}
+          <div className="bg-white rounded-lg border border-[#e4e7ec] p-6">
+            <FieldsSection
+              fields={fields}
+              tableFields={tableFields}
+              onFieldChange={handleFieldChange}
+              onFieldMappingChange={handleFieldMappingChange}
+            />
+          </div>
+        </div>
       </div>
 
       {/* 底部区域 */}
-      <div className="bg-white border-t border-[#e5e6eb] px-3 sm:px-4 md:px-5 py-2.5 flex flex-col gap-1">
-        <p className="text-xs text-[#000000] leading-[22px]">
-          {fieldsConfigError
-            ? "⚠️ 字段配置加载失败，使用默认配置"
-            : "请注意检查你有表格编辑权限"
-          }
-        </p>
+      <div className="bg-white border-t border-[#e4e7ec] px-6 py-4">
+        {fieldsConfigError && (
+          <div className="mb-3 text-xs text-[#f04438]">
+            ⚠️ 字段配置加载失败，使用默认配置
+          </div>
+        )}
         <button
           onClick={handleApply}
           disabled={fields.filter(f => f.isChecked).length === 0 || fieldsConfigLoading}
           className={cn(
-            "w-full h-8 text-white text-sm font-medium rounded-sm transition-colors flex items-center justify-center",
+            "w-full h-11 text-white text-sm font-medium rounded-lg transition-colors",
             fields.filter(f => f.isChecked).length === 0 || fieldsConfigLoading
-              ? "bg-[#c9cdd4] cursor-not-allowed"
-              : "bg-[#165dff] hover:bg-[#4080ff]"
+              ? "bg-[#d0d5dd] cursor-not-allowed"
+              : "bg-[#165dff] hover:bg-[#1570ef]"
           )}
         >
-          {fieldsConfigLoading ? "加载中..." : "同步数据"}
+          {fieldsConfigLoading ? "加载中..." : "开始同步数据"}
         </button>
       </div>
     </div>

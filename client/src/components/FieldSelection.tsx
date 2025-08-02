@@ -1,20 +1,22 @@
 import { cn } from '@/lib/utils';
-import { Field } from "@/types/common";
+import { Field, TableField } from "@/types/common";
+import { AlertTriangle, ChevronDown } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
 // 预定义颜色池 - 精心挑选的颜色组合
 const COLOR_POOL = [
-    { bg: 'bg-[#f5e8ff]', text: 'text-[#722ed1]' }, // 紫色
-    { bg: 'bg-[#fff3e8]', text: 'text-[#ff8800]' }, // 橙色
-    { bg: 'bg-[#e8f3ff]', text: 'text-[#165dff]' }, // 蓝色
-    { bg: 'bg-[#e8ffea]', text: 'text-[#00d437]' }, // 绿色
-    { bg: 'bg-[#ffe8f1]', text: 'text-[#ff0066]' }, // 粉色
-    { bg: 'bg-[#e8fffb]', text: 'text-[#0fc6c2]' }, // 青色
-    { bg: 'bg-[#fff8e8]', text: 'text-[#d48806]' }, // 金色
-    { bg: 'bg-[#f0e8ff]', text: 'text-[#9254de]' }, // 淡紫色
-    { bg: 'bg-[#e8f5ff]', text: 'text-[#1890ff]' }, // 天蓝色
-    { bg: 'bg-[#e8fdf5]', text: 'text-[#13c2c2]' }, // 薄荷绿
-    { bg: 'bg-[#fff2e8]', text: 'text-[#fa8c16]' }, // 暖橙色
-    { bg: 'bg-[#f9f0ff]', text: 'text-[#b37feb]' }, // 浅紫色
+    { bg: 'bg-[#f5e8ff]', text: 'text-[#722ed1]', cardBg: 'bg-[#f5e8ff]', cardBorder: 'border-[#722ed1]' }, // 紫色
+    { bg: 'bg-[#fff3e8]', text: 'text-[#ff8800]', cardBg: 'bg-[#fff3e8]', cardBorder: 'border-[#ff8800]' }, // 橙色
+    { bg: 'bg-[#e8f3ff]', text: 'text-[#165dff]', cardBg: 'bg-[#e8f3ff]', cardBorder: 'border-[#165dff]' }, // 蓝色
+    { bg: 'bg-[#e8ffea]', text: 'text-[#00d437]', cardBg: 'bg-[#e8ffea]', cardBorder: 'border-[#00d437]' }, // 绿色
+    { bg: 'bg-[#ffe8f1]', text: 'text-[#ff0066]', cardBg: 'bg-[#ffe8f1]', cardBorder: 'border-[#ff0066]' }, // 粉色
+    { bg: 'bg-[#e8fffb]', text: 'text-[#0fc6c2]', cardBg: 'bg-[#e8fffb]', cardBorder: 'border-[#0fc6c2]' }, // 青色
+    { bg: 'bg-[#fff8e8]', text: 'text-[#d48806]', cardBg: 'bg-[#fff8e8]', cardBorder: 'border-[#d48806]' }, // 金色
+    { bg: 'bg-[#f0e8ff]', text: 'text-[#9254de]', cardBg: 'bg-[#f0e8ff]', cardBorder: 'border-[#9254de]' }, // 淡紫色
+    { bg: 'bg-[#e8f5ff]', text: 'text-[#1890ff]', cardBg: 'bg-[#e8f5ff]', cardBorder: 'border-[#1890ff]' }, // 天蓝色
+    { bg: 'bg-[#e8fdf5]', text: 'text-[#13c2c2]', cardBg: 'bg-[#e8fdf5]', cardBorder: 'border-[#13c2c2]' }, // 薄荷绿
+    { bg: 'bg-[#fff2e8]', text: 'text-[#fa8c16]', cardBg: 'bg-[#fff2e8]', cardBorder: 'border-[#fa8c16]' }, // 暖橙色
+    { bg: 'bg-[#f9f0ff]', text: 'text-[#b37feb]', cardBg: 'bg-[#f9f0ff]', cardBorder: 'border-[#b37feb]' }, // 浅紫色
 ];
 
 // 字符串哈希函数 - 为相同字符串生成相同索引
@@ -26,16 +28,57 @@ const stringHash = (str: string): number => {
     return Math.abs(hash);
 };
 
-// 获取字段标签样式
+// 获取字段标签样式和卡片样式
 const getFieldTagStyle = (type: string) => {
-    // 已知类型的固定样式配置
-    const knownTypes: Record<string, { bg: string; text: string }> = {
-        'NC': { bg: 'bg-[#f5e8ff]', text: 'text-[#722ed1]' },
-        'SMOM': { bg: 'bg-[#fff3e8]', text: 'text-[#ff8800]' },
-        'TMS': { bg: 'bg-[#e8f3ff]', text: 'text-[#165dff]' },
-        'CRM': { bg: 'bg-[#e8ffea]', text: 'text-[#00d437]' },
-        'MRP': { bg: 'bg-[#ffe8f1]', text: 'text-[#ff0066]' },
-        '赛意': { bg: 'bg-[#e8fffb]', text: 'text-[#0fc6c2]' },
+    // 已知类型的固定样式配置，包含卡片样式
+    const knownTypes: Record<string, {
+        bg: string;
+        text: string;
+        cardBg: string;
+        cardBorder: string;
+    }> = {
+        'NC': {
+            bg: 'bg-[#f5e8ff]',
+            text: 'text-[#722ed1]',
+            cardBg: 'bg-[#f5e8ff]',
+            cardBorder: 'border-[#722ed1]'
+        },
+        'SMOM': {
+            bg: 'bg-[#fff3e8]',
+            text: 'text-[#ff8800]',
+            cardBg: 'bg-[#fff3e8]',
+            cardBorder: 'border-[#ff8800]'
+        },
+        'TMS': {
+            bg: 'bg-[#e8f3ff]',
+            text: 'text-[#165dff]',
+            cardBg: 'bg-[#e8f3ff]',
+            cardBorder: 'border-[#165dff]'
+        },
+        'CRM': {
+            bg: 'bg-[#e8ffea]',
+            text: 'text-[#00d437]',
+            cardBg: 'bg-[#e8ffea]',
+            cardBorder: 'border-[#00d437]'
+        },
+        'MRP': {
+            bg: 'bg-[#ffe8f1]',
+            text: 'text-[#ff0066]',
+            cardBg: 'bg-[#ffe8f1]',
+            cardBorder: 'border-[#ff0066]'
+        },
+        '赛意': {
+            bg: 'bg-[#e8fffb]',
+            text: 'text-[#0fc6c2]',
+            cardBg: 'bg-[#e8fffb]',
+            cardBorder: 'border-[#0fc6c2]'
+        },
+        '青蓝': {
+            bg: 'bg-[#e8fffb]',
+            text: 'text-[#0fc6c2]',
+            cardBg: 'bg-[#e8fffb]',
+            cardBorder: 'border-[#0fc6c2]'
+        }
     };
 
     // 如果是已知类型，使用固定样式
@@ -48,36 +91,34 @@ const getFieldTagStyle = (type: string) => {
     return COLOR_POOL[colorIndex];
 };
 
-// 自定义Checkbox组件以完全匹配Figma设计
+// 自定义Checkbox组件 - 匹配Figma设计
 const CustomCheckbox: React.FC<{
     id?: string;
     checked: boolean;
     onCheckedChange: (checked: boolean) => void;
     disabled?: boolean;
-    indeterminate?: boolean;
-}> = ({ id, checked, onCheckedChange, disabled, indeterminate }) => {
+}> = ({ id, checked, onCheckedChange, disabled }) => {
     return (
         <button
             id={id}
             type="button"
             role="checkbox"
-            aria-checked={indeterminate ? "mixed" : checked}
+            aria-checked={checked}
             disabled={disabled}
             onClick={() => !disabled && onCheckedChange(!checked)}
             className={cn(
-                "h-3.5 w-3.5 rounded-sm relative flex items-center justify-center transition-colors shrink-0",
+                "h-4 w-4 rounded border flex items-center justify-center transition-colors shrink-0",
                 "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                // 边框和背景
-                !checked && "bg-white border-2 border-[#e5e6eb]",
-                checked && !disabled && "bg-[#165dff] border-0",
-                checked && disabled && "bg-[#c9cdd4] border-0",
+                !checked && "bg-white border-[#d0d5dd] hover:border-[#98a2b3]",
+                checked && !disabled && "bg-[#165dff] border-[#165dff]",
+                checked && disabled && "bg-[#c9cdd4] border-[#c9cdd4]",
                 disabled && "cursor-not-allowed"
             )}
         >
-            {checked && !indeterminate && (
-                <svg className="h-2.5 w-2.5" viewBox="0 0 10 10" fill="none">
+            {checked && (
+                <svg className="h-2.5 w-2.5" viewBox="0 0 16 16" fill="none">
                     <path
-                        d="M8.5 2.5L3.5 7.5L1.5 5.5"
+                        d="M13.5 4.5L6 12L2.5 8.5"
                         stroke="white"
                         strokeWidth="2"
                         strokeLinecap="round"
@@ -85,113 +126,201 @@ const CustomCheckbox: React.FC<{
                     />
                 </svg>
             )}
-            {indeterminate && (
-                <div className="h-0.5 w-1.5 bg-white rounded-[0.5px]" />
-            )}
         </button>
+    );
+};
+
+// 字段映射下拉选择器 - 匹配Figma设计
+const FieldMappingSelect: React.FC<{
+    field: Field;
+    tableFields: TableField[];
+    onMappingChange: (fieldId: string, targetFieldId?: string, targetFieldName?: string, mappingType?: 'existing' | 'new') => void;
+}> = ({ field, tableFields, onMappingChange }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const selectRef = useRef<HTMLDivElement>(null);
+
+    const handleSelect = (targetFieldId?: string, targetFieldName?: string, mappingType?: 'existing' | 'new') => {
+        onMappingChange(field.id, targetFieldId, targetFieldName, mappingType);
+        setIsOpen(false);
+    };
+
+    const currentSelection = field.mappingType === 'new'
+        ? '新增列'
+        : field.targetFieldName || '请选择字段';
+
+    // 点击外部关闭下拉框
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (selectRef.current && !selectRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+
+        if (isOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isOpen]);
+
+    return (
+        <div ref={selectRef} className="relative w-full">
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-full h-8 px-3 py-1 bg-white border border-[#d0d5dd] rounded-md flex items-center justify-between text-sm text-[#344054] hover:border-[#98a2b3] transition-colors shadow-sm"
+            >
+                <span>{currentSelection}</span>
+                <ChevronDown className={cn(
+                    "h-4 w-4 text-[#667085] transition-transform",
+                    isOpen && "rotate-180"
+                )} />
+            </button>
+
+            {isOpen && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#d0d5dd] rounded-md shadow-lg z-20 max-h-40 overflow-y-auto">
+                    <button
+                        onClick={() => handleSelect(undefined, undefined, 'new')}
+                        className="w-full px-3 py-2 text-left text-sm text-[#344054] hover:bg-[#f9fafb] flex items-center gap-2 border-b border-[#f2f4f7]"
+                    >
+                        <span className="text-[#165dff] font-bold">+</span>
+                        新增列
+                    </button>
+                    {tableFields && tableFields.length > 0 ? (
+                        tableFields.map(tableField => (
+                            <button
+                                key={tableField.id}
+                                onClick={() => handleSelect(tableField.id, tableField.name, 'existing')}
+                                className={cn(
+                                    "w-full px-3 py-2 text-left text-sm text-[#344054] hover:bg-[#f9fafb]",
+                                    field.targetFieldId === tableField.id && "bg-[#f5f8ff] text-[#165dff]"
+                                )}
+                            >
+                                {tableField.name}
+                            </button>
+                        ))
+                    ) : (
+                        <div className="px-3 py-2 text-sm text-[#98a2b3] italic">
+                            暂无可用字段
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
     );
 };
 
 export const FieldsSection: React.FC<{
     fields: Field[];
+    tableFields: TableField[];
     onFieldChange: (id: string, checked: boolean) => void;
-    onSelectAll: (checked: boolean) => void;
-    isAllSelected: boolean;
-    isPartiallySelected: boolean;
-}> = ({ fields, onFieldChange, onSelectAll, isAllSelected, isPartiallySelected }) => {
-    // 按类型对字段进行分组
-    const groupedFields = fields.reduce((acc, field) => {
-        if (!acc[field.type]) {
-            acc[field.type] = [];
-        }
-        acc[field.type].push(field);
-        return acc;
-    }, {} as Record<string, Field[]>);
-
-    // 按类型名称排序（已知类型优先）
-    const knownTypeOrder = ['NC', 'SMOM', 'TMS', 'CRM', 'MRP', '赛意'];
-    const sortedTypes = Object.keys(groupedFields).sort((a, b) => {
-        const aIndex = knownTypeOrder.indexOf(a);
-        const bIndex = knownTypeOrder.indexOf(b);
-
-        // 如果都是已知类型，按预定义顺序排序
-        if (aIndex !== -1 && bIndex !== -1) {
-            return aIndex - bIndex;
-        }
-
-        // 已知类型排在前面
-        if (aIndex !== -1) return -1;
-        if (bIndex !== -1) return 1;
-
-        // 未知类型按字母顺序排序
-        return a.localeCompare(b);
-    });
+    onFieldMappingChange: (fieldId: string, targetFieldId?: string, targetFieldName?: string, mappingType?: 'existing' | 'new') => void;
+}> = ({ fields, tableFields, onFieldChange, onFieldMappingChange }) => {
+    // 计算统计信息
+    const totalFields = fields.length;
+    const checkedFields = fields.filter(f => f.isChecked).length;
 
     return (
-        <div className="flex flex-col gap-2.5 flex-1 min-h-0">
-            <p className="text-sm font-medium text-[#1d2129]">
-                将以下勾选的字段数据同步到表格中
-            </p>
+        <div className="flex flex-col gap-3">
+            {/* 统计信息 */}
+            <div className="flex items-center justify-between">
+                <h3 className="text-sm font-medium text-[#344054]">
+                    选择同步字段 ({totalFields})
+                </h3>
+                <span className="text-sm text-[#165dff] font-medium">
+                    {checkedFields} 已选
+                </span>
+            </div>
 
-            <div className="bg-[#f7f8fa] rounded-[3px] p-[10px] flex-1 min-h-[300px]">
-                <div className="flex flex-col gap-2.5 h-full overflow-y-auto">
-                    {/* 全选 */}
-                    <div className="flex items-center gap-2">
-                        <CustomCheckbox
-                            id="select-all"
-                            checked={isAllSelected}
-                            onCheckedChange={onSelectAll}
-                            indeterminate={isPartiallySelected && !isAllSelected}
-                        />
-                        <label htmlFor="select-all" className="text-sm font-medium text-[#1d2129] cursor-pointer select-none">
-                            全选
-                        </label>
-                    </div>
-
-                    {/* 分隔线 */}
-                    <div className="h-px bg-[#e5e6eb] -mx-[10px]" />
-
-                    {/* 动态渲染所有类型的字段 */}
-                    <div className="flex flex-col gap-2.5">
-                        {sortedTypes.map((type, typeIndex) => (
-                            <div key={type} className={cn("flex flex-col gap-2.5", typeIndex > 0 && "mt-2")}>
-                                {groupedFields[type].map(field => (
-                                    <FieldItem
-                                        key={field.id}
-                                        field={field}
-                                        onCheckedChange={(checked) => onFieldChange(field.id, checked)}
-                                    />
-                                ))}
-                            </div>
-                        ))}
-                    </div>
-                </div>
+            {/* 字段列表 */}
+            <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                {fields.map(field => (
+                    <FieldCard
+                        key={field.id}
+                        field={field}
+                        tableFields={tableFields}
+                        onCheckedChange={(checked) => onFieldChange(field.id, checked)}
+                        onMappingChange={onFieldMappingChange}
+                    />
+                ))}
             </div>
         </div>
     );
 };
 
-// 字段项组件
-const FieldItem: React.FC<{
+// 字段卡片组件 - 精确匹配Figma设计
+const FieldCard: React.FC<{
     field: Field;
+    tableFields: TableField[];
     onCheckedChange: (checked: boolean) => void;
-}> = ({ field, onCheckedChange }) => {
+    onMappingChange: (fieldId: string, targetFieldId?: string, targetFieldName?: string, mappingType?: 'existing' | 'new') => void;
+}> = ({ field, tableFields, onCheckedChange, onMappingChange }) => {
+    // 获取字段标签样式，用于卡片边框和背景
+    const tagStyle = getFieldTagStyle(field.type);
+
     return (
-        <div className="flex items-center justify-between pr-2">
-            <div className="flex items-center gap-2.5">
-                <CustomCheckbox
-                    id={`field-${field.id}`}
-                    checked={field.isChecked}
-                    onCheckedChange={(checked) => onCheckedChange(checked)}
-                    disabled={field.isDisabled}
-                />
+        <div className={cn(
+            "border-2 rounded-md p-4 transition-all duration-200",
+            field.isChecked
+                ? `${tagStyle.cardBg} ${tagStyle.cardBorder}` // 使用标签对应的卡片样式
+                : "border-[#e4e7ec] bg-white hover:border-[#d0d5dd]"
+        )}>
+            <div className="flex items-center justify-between">
+                {/* 左侧：复选框和字段名 */}
+                <div className="flex items-center gap-3">
+                    <CustomCheckbox
+                        id={`field-${field.id}`}
+                        checked={field.isChecked}
+                        onCheckedChange={onCheckedChange}
+                        disabled={false}
+                    />
+                    <div className="flex items-center gap-2">
+                        <label
+                            htmlFor={`field-${field.id}`}
+                            className="text-sm font-medium text-[#101828] cursor-pointer"
+                        >
+                            {field.name}
+                        </label>
+                        {/* 警告图标 */}
+                        {field.hasWarning && (
+                            <AlertTriangle className="h-4 w-4 text-[#f59e0b]" />
+                        )}
+                    </div>
+                </div>
+
+                {/* 右侧：字段标签 */}
                 <FieldTag type={field.type} />
-                <label htmlFor={`field-${field.id}`} className="text-sm text-[#1f2329] cursor-pointer">
-                    {field.name}
-                </label>
             </div>
-            {field.isDisabled && (
-                <span className="text-xs text-[#86909c]">已有字段默认选中</span>
+
+            {/* 字段映射选择器 - 只在勾选时显示 */}
+            {field.isChecked && (
+                <div className="mt-3 space-y-2">
+                    <label className="text-xs text-[#475467]">
+                        填充到表格列：
+                    </label>
+                    <FieldMappingSelect
+                        field={field}
+                        tableFields={tableFields}
+                        onMappingChange={onMappingChange}
+                    />
+                </div>
+            )}
+
+            {/* 状态提示信息 */}
+            {(field.helperText || field.warningMessage) && (
+                <div className="mt-2 space-y-1">
+                    {field.helperText && (
+                        <div className="text-xs text-[#667085]">
+                            {field.helperText}
+                        </div>
+                    )}
+                    {field.warningMessage && (
+                        <div className="text-xs text-[#f59e0b]">
+                            {field.warningMessage}
+                        </div>
+                    )}
+                </div>
             )}
         </div>
     );
@@ -201,7 +330,7 @@ const FieldItem: React.FC<{
 const FieldTag: React.FC<{ type: string }> = ({ type }) => {
     const style = getFieldTagStyle(type);
     return (
-        <div className={cn('px-2 h-5 flex items-center rounded-sm text-xs', style.bg)}>
+        <div className={cn('px-2 py-0.5 rounded text-xs font-medium', style.bg)}>
             <span className={style.text}>{type}</span>
         </div>
     );

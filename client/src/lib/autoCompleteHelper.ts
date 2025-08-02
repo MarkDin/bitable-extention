@@ -1,4 +1,5 @@
 import { getDataByIds, GetDataByIdsResult } from "@/lib/dataSync";
+import { getStoredUserInfo } from "@/lib/feishuAuth";
 import { ensureFieldsExist, FieldCreationConfig, formatFieldCreationResults } from "@/lib/fieldManager";
 import { Field } from "@/types/common";
 import type { ICommonSelectFieldProperty, IOpenCellValue, ISelectFieldOption, ITable } from "@lark-base-open/js-sdk";
@@ -20,6 +21,9 @@ export interface OperationLog {
   bitableUrl: string;          // 补全的多维表格的链接
   tableName: string;           // 表格名称
   tableId: string;             // 表格ID
+  user: {                      // 用户信息
+    id: string;          // 用户Open ID
+  };
 }
 
 interface AutoCompleteParams {
@@ -55,9 +59,25 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
 
   // 记录开始时间
   const submitTime = new Date().toISOString();
+
+  // 获取当前用户信息
+  const currentUser = getStoredUserInfo();
+  if (!currentUser) {
+    console.warn('[AutoComplete] 未获取到用户信息');
+    toast({
+      title: '未登录',
+      description: '请先登录飞书账号',
+      variant: 'destructive'
+    });
+    return;
+  }
+
   let operationLog: Partial<OperationLog> = {
     submitTime,
     selectedFields: selectedFields.map(f => f.name), // 记录选中的字段名称
+    user: {
+      id: currentUser.open_id,
+    }
   };
 
   try {
