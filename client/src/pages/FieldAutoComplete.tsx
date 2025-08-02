@@ -289,7 +289,6 @@ const FieldAutoComplete = () => {
             targetFieldId: targetFieldExists ? savedFieldConfig.targetFieldId : undefined,
             targetFieldName: targetFieldExists ? savedFieldConfig.targetFieldName : undefined,
             mappingType: targetFieldExists ? savedFieldConfig.mappingType : 'new' as const,
-            helperText: savedFieldConfig.isChecked ? '使用上次配置' : undefined,
             // 警告状态
             hasWarning: field.name === '电话' || field.name.includes('电话'),
             warningMessage: (field.name === '电话' || field.name.includes('电话')) ? '请注意检查你有表格编辑权限' : undefined

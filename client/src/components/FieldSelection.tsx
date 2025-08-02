@@ -224,13 +224,23 @@ export const FieldsSection: React.FC<{
     return (
         <div className="flex flex-col gap-3">
             {/* 统计信息 */}
-            <div className="flex items-center justify-between">
-                <h3 className="text-sm font-medium text-[#344054]">
-                    选择同步字段 ({totalFields})
-                </h3>
-                <span className="text-sm text-[#165dff] font-medium">
-                    {checkedFields} 已选
-                </span>
+            <div className="flex justify-between items-center w-full">
+                <div className="flex items-center gap-[3px]">
+                    <div className="flex items-center justify-center w-4 h-4">
+                        <svg width="16" height="16" viewBox="0 0 16 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12.2287 5.55716C12.6455 6.15493 12.9388 6.84523 13.0716 7.59106H14.6667V9.40926H13.0716C12.9388 10.1551 12.6455 10.8454 12.2287 11.4432L13.3569 12.5714L12.0713 13.857L10.943 12.7288C10.3453 13.1456 9.65497 13.4389 8.90914 13.5717V15.1668H7.09094V13.5717C6.34511 13.4389 5.65481 13.1456 5.05704 12.7288L3.92881 13.857L2.64317 12.5714L3.77137 11.4432C3.35457 10.8454 3.06128 10.1551 2.92848 9.40926H1.33337V7.59106H2.92848C3.06128 6.84523 3.35457 6.15493 3.77137 5.55716L2.64317 4.42893L3.92881 3.14329L5.05704 4.2715C5.65481 3.8547 6.34511 3.5614 7.09094 3.42861V1.8335H8.90914V3.42861C9.65497 3.5614 10.3453 3.8547 10.943 4.2715L12.0713 3.14329L13.3569 4.42893L12.2287 5.55716Z" stroke="#363949" strokeLinejoin="round" />
+                            <path d="M8.00004 10.1668C8.92051 10.1668 9.66671 9.42063 9.66671 8.50016C9.66671 7.5797 8.92051 6.8335 8.00004 6.8335C7.07957 6.8335 6.33337 7.5797 6.33337 8.50016C6.33337 9.42063 7.07957 10.1668 8.00004 10.1668Z" stroke="#363949" strokeLinejoin="round" />
+                        </svg>
+                    </div>
+                    <div className="text-black text-sm font-medium leading-snug">
+                        选择同步字段 ({totalFields})
+                    </div>
+                </div>
+                <div className="h-6 px-2.5 py-1 bg-gray-100 rounded-[40px] flex justify-center items-center whitespace-nowrap">
+                    <div className="text-zinc-700 text-xs font-medium leading-none">
+                        {checkedFields} 已选
+                    </div>
+                </div>
             </div>
 
             {/* 字段列表 */}

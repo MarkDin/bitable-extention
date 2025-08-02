@@ -294,6 +294,7 @@ const FeishuQRLogin: React.FC<FeishuQRLoginProps> = ({
     const refreshQRCode = () => {
         if (isLoading || isProcessingLogin) return; // 防止重复点击
 
+        console.log('🔄 开始刷新二维码...');
         setIsLoading(true);
         setError('');
 
@@ -302,6 +303,13 @@ const FeishuQRLogin: React.FC<FeishuQRLoginProps> = ({
         if (currentHandler) {
             window.removeEventListener('message', currentHandler);
             messageHandlerRef.current = null;
+            console.log('✅ 已清理消息监听器');
+        }
+
+        // 清理当前的QR实例
+        if (qrLoginRef.current) {
+            qrLoginRef.current = null;
+            console.log('✅ 已清理QR实例');
         }
 
         // 安全地清空容器
@@ -309,11 +317,19 @@ const FeishuQRLogin: React.FC<FeishuQRLoginProps> = ({
         if (container) {
             try {
                 container.innerHTML = '';
+                console.log('✅ 已清空容器');
             } catch (e) {
                 console.warn('清理容器时出错:', e);
                 setIsLoading(false);
+                return;
             }
         }
+
+        // 延迟一下再重新初始化，确保清理完成
+        setTimeout(() => {
+            console.log('🚀 重新初始化二维码...');
+            initQRCode();
+        }, 100);
     };
 
     return (
