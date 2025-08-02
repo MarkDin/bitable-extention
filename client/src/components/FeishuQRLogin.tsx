@@ -44,6 +44,89 @@ const FeishuQRLogin: React.FC<FeishuQRLoginProps> = ({
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string>('');
     const [isSDKLoaded, setIsSDKLoaded] = useState(false);
+    const [isProcessingLogin, setIsProcessingLogin] = useState(false);
+
+    // 处理直接登录的函数 - 先触发callback再获取用户信息
+    const handleDirectLogin = useCallback(async (tmpCode: string, authUrl: string) => {
+        try {
+            setIsProcessingLogin(true);
+            console.log('🚀 开始直接登录流程');
+            console.log('临时授权码:', tmpCode);
+
+            // 第一步：使用隐藏iframe触发后端callback接口
+            const callbackUrl = `${authUrl}&tmp_code=${tmpCode}`;
+            console.log('🔄 使用iframe触发callback:', callbackUrl);
+
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = callbackUrl;
+            document.body.appendChild(iframe);
+
+            // 等待callback处理完成（给后端一些时间处理）
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            // 清理iframe
+            document.body.removeChild(iframe);
+
+            // 第二步：通过state参数获取用户信息
+            const storedState = localStorage.getItem('feishu_auth_state');
+            console.log('使用的state参数:', storedState);
+
+            const response = await fetch('http://localhost:8080/feishu/user_info?state=' + storedState, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                }
+            });
+
+            console.log('后端API响应状态:', response.status);
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            console.log('后端返回数据:', data);
+
+            if (data.success && data.data) {
+                console.log('✅ 登录成功');
+
+                const { user_info, token_info } = data.data;
+                console.log('解析后的用户信息:', user_info);
+                console.log('解析后的Token信息:', token_info);
+
+                // 存储token信息到本地
+                if (token_info) {
+                    localStorage.setItem('feishu_access_token', token_info.access_token);
+                    localStorage.setItem('feishu_refresh_token', token_info.refresh_token || '');
+
+                    // 计算token过期时间
+                    const expiresAt = Date.now() + (token_info.expires_in * 1000);
+                    localStorage.setItem('feishu_token_expires_at', expiresAt.toString());
+                }
+
+                // 存储用户信息
+                if (user_info) {
+                    localStorage.setItem('feishu_user_info', JSON.stringify(user_info));
+                }
+
+                // 调用成功回调 - 传递用户信息
+                onSuccess?.(JSON.stringify(user_info || {}));
+
+            } else {
+                throw new Error(data.message || '登录失败');
+            }
+
+        } catch (error) {
+            console.error('直接登录失败:', error);
+            const errorMessage = error instanceof Error ? error.message : '登录过程中发生错误';
+            setError(errorMessage);
+            onError?.(errorMessage);
+        } finally {
+            setIsProcessingLogin(false);
+        }
+    }, [onSuccess, onError]);
 
     // 加载飞书QR SDK
     useEffect(() => {
@@ -95,21 +178,21 @@ const FeishuQRLogin: React.FC<FeishuQRLoginProps> = ({
             // 使用innerHTML清空容器，避免removeChild错误
             container.innerHTML = '';
 
-            // 构建授权URL - 重定向到前端获取code
+            // 构建授权URL - 使用传入的配置
             const CLIENT_ID = config.clientId;
-            const REDIRECT_URI = encodeURIComponent(window.location.origin + '/#/auth/callback');
+            const REDIRECT_URI = "http://localhost:8080/auth/callback";
             const STATE = config.state || 'feishu_qr_' + Date.now();
 
             // 将state存储到localStorage中，以便后续验证
             localStorage.setItem('feishu_auth_state', STATE);
 
-            // 使用前端回调地址获取code
-            const authUrl = `https://passport.feishu.cn/suite/passport/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&state=${STATE}`;
+            // 使用传入的配置构建授权URL
+            const authUrl = `https://passport.feishu.cn/suite/passport/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&state=${STATE}`;
 
             console.log('=== 二维码配置信息 ===');
             console.log('客户端ID:', CLIENT_ID);
-            console.log('重定向URI（编码前）:', window.location.origin + '/#/auth/callback');
-            console.log('重定向URI（编码后）:', REDIRECT_URI);
+            console.log('重定向URI:', REDIRECT_URI);
+            console.log('重定向URI（编码后）:', encodeURIComponent(REDIRECT_URI));
             console.log('状态参数:', STATE);
             console.log('完整授权URL:', authUrl);
             console.log('======================');
@@ -147,14 +230,13 @@ const FeishuQRLogin: React.FC<FeishuQRLoginProps> = ({
                         if (loginTmpCode) {
                             console.log('🔑 收到临时授权码:', loginTmpCode);
 
-                            // 根据官方文档，需要手动重定向到授权URL + tmp_code
-                            const redirectUrl = `${authUrl}&tmp_code=${loginTmpCode}`;
-                            console.log('🔄 准备重定向到:', redirectUrl);
+                            // 🎯 关键修改：先触发callback再获取用户信息
+                            handleDirectLogin(loginTmpCode, authUrl);
 
-                            // 执行重定向，这会触发飞书服务器返回302重定向到我们的callback
-                            window.location.href = redirectUrl;
                         } else {
                             console.error('❌ 未找到tmp_code in event.data:', event.data);
+                            setError('获取授权码失败');
+                            onError?.('获取授权码失败');
                         }
                     } else {
                         console.log('飞书QR匹配失败，忽略此消息');
@@ -181,7 +263,7 @@ const FeishuQRLogin: React.FC<FeishuQRLoginProps> = ({
             setError('初始化二维码失败，请重试');
             setIsLoading(false);
         }
-    }, [config, onSuccess]);
+    }, [config, handleDirectLogin, onError]);
 
     // 初始化二维码
     useEffect(() => {
@@ -210,7 +292,7 @@ const FeishuQRLogin: React.FC<FeishuQRLoginProps> = ({
 
     // 刷新二维码
     const refreshQRCode = () => {
-        if (isLoading) return; // 防止重复点击
+        if (isLoading || isProcessingLogin) return; // 防止重复点击
 
         setIsLoading(true);
         setError('');
@@ -253,11 +335,13 @@ const FeishuQRLogin: React.FC<FeishuQRLoginProps> = ({
                 )}
 
                 <div className="relative">
-                    {isLoading && (
+                    {(isLoading || isProcessingLogin) && (
                         <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-10">
                             <div className="flex flex-col items-center gap-2">
                                 <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-                                <span className="text-sm text-gray-600">加载中...</span>
+                                <span className="text-sm text-gray-600">
+                                    {isProcessingLogin ? '正在处理登录...' : '加载中...'}
+                                </span>
                             </div>
                         </div>
                     )}
@@ -285,7 +369,7 @@ const FeishuQRLogin: React.FC<FeishuQRLoginProps> = ({
                         variant="outline"
                         size="sm"
                         onClick={refreshQRCode}
-                        disabled={isLoading}
+                        disabled={isLoading || isProcessingLogin}
                         className="w-full"
                     >
                         <RefreshCw className="w-4 h-4 mr-2" />
