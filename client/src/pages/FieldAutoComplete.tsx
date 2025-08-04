@@ -1,4 +1,5 @@
 import { FieldsSection } from "@/components/FieldSelection";
+import HelpAndFeedback from "@/components/HelpAndFeedback";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { useFeishuBase } from "@/hooks/use-feishu-base";
 import { useToast } from "@/hooks/use-toast";
@@ -9,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { Field, TableField, TableFieldConfig } from "@/types/common";
 import { bitable } from "@lark-base-open/js-sdk";
 import { useQuery } from "@tanstack/react-query";
-import { BookOpen, MessageSquare } from 'lucide-react';
+
 import { useEffect, useState } from "react";
 import AutoCompleteProgress from "./AutoCompleteProgress";
 import AutoCompleteResult from "./AutoCompleteResult";
@@ -645,111 +646,101 @@ const FieldAutoComplete = () => {
     );
   }
 
-  // 默认表单页面 - 新的UI设计
+  // 默认表单页面 - 修复底部置底问题
   return (
     <div className="w-full h-full bg-[#f8f9fa] flex flex-col">
-      {/* 标题区域 */}
-      <div className="bg-white border-b border-[#e4e7ec] px-6 py-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-lg font-semibold text-[#101828]">帮助与反馈</h1>
-          <div className="flex items-center gap-3">
-            <button className="flex items-center gap-2 px-3 py-1.5 text-sm text-[#475467] hover:text-[#344054] hover:bg-[#f9fafb] rounded-md transition-colors">
-              <BookOpen className="h-4 w-4" />
-              查看使用手册
-            </button>
-            <button className="flex items-center gap-2 px-3 py-1.5 text-sm text-[#165dff] hover:text-[#1570ef] hover:bg-[#f5f8ff] rounded-md transition-colors">
-              <MessageSquare className="h-4 w-4" />
-              加入群聊反馈
-            </button>
-          </div>
-        </div>
+      {/* 帮助与反馈区域 */}
+      <div className="bg-white px-6 py-4 flex-shrink-0 border-b border-[#e4e7ec]">
+        <HelpAndFeedback />
       </div>
 
-      {/* 内容区域 */}
-      <div className="flex-1 px-6 py-6 overflow-y-auto">
-        <div className="space-y-6">
-          {/* 配置查询条件 - 精确匹配Figma设计 */}
-          <div className="bg-white rounded-lg border border-[#e4e7ec] p-4">
-            <h2 className="text-sm font-medium text-[#344054] mb-3">配置查询条件</h2>
-            <div className="p-2.5 bg-gray-100 rounded-lg outline outline-1 outline-offset-[-1px] outline-black/5 flex flex-col justify-center items-start gap-2.5 min-h-[8rem]">
-              <div className="w-full flex flex-wrap justify-start items-center gap-[5px]">
-                <div className="justify-center text-neutral-800 text-sm font-medium font-['PingFang_SC'] leading-snug">当</div>
-                <div className="flex-1 min-w-[140px] max-w-[200px] px-3 py-1 bg-white rounded-md outline outline-1 outline-offset-[-1px] outline-black/10 flex justify-start items-center gap-1.5">
-                  <div className="flex-1 py-px flex justify-start items-center overflow-hidden">
-                    <div className="justify-start text-zinc-800 text-sm font-normal font-['PingFang_SC'] leading-snug truncate">
-                      {tableName || '欧洲一区项目跟进表'}
+      {/* 内容区域 - 优化布局 */}
+      <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex-1 px-6 py-4 overflow-y-auto">
+          <div className="space-y-4">
+            {/* 配置查询条件 - 精确匹配Figma设计 */}
+            <div className="bg-white rounded-lg border border-[#e4e7ec] p-4">
+              <h2 className="text-sm font-medium text-[#344054] mb-3">配置查询条件</h2>
+              <div className="p-2.5 bg-gray-100 rounded-lg outline outline-1 outline-offset-[-1px] outline-black/5 flex flex-col justify-center items-start gap-2.5 min-h-[8rem]">
+                <div className="w-full flex flex-wrap justify-start items-center gap-[5px]">
+                  <div className="justify-center text-neutral-800 text-sm font-medium font-['PingFang_SC'] leading-snug">当</div>
+                  <div className="flex-1 min-w-[140px] max-w-[200px] px-3 py-1 bg-white rounded-md outline outline-1 outline-offset-[-1px] outline-black/10 flex justify-start items-center gap-1.5">
+                    <div className="flex-1 py-px flex justify-start items-center overflow-hidden">
+                      <div className="justify-start text-zinc-800 text-sm font-normal font-['PingFang_SC'] leading-snug truncate">
+                        {tableName || '欧洲一区项目跟进表'}
+                      </div>
+                    </div>
+                    <div className="size-3 inline-flex flex-col justify-center items-center overflow-hidden shrink-0">
+                      <div className="size-3 relative overflow-hidden">
+                        <div className="size-1.5 left-[6.01px] top-[8.96px] absolute origin-top-left rotate-[-135deg] bg-black/10"></div>
+                      </div>
                     </div>
                   </div>
-                  <div className="size-3 inline-flex flex-col justify-center items-center overflow-hidden shrink-0">
-                    <div className="size-3 relative overflow-hidden">
-                      <div className="size-1.5 left-[6.01px] top-[8.96px] absolute origin-top-left rotate-[-135deg] bg-black/10"></div>
+                  <div className="justify-center text-neutral-800 text-sm font-medium font-['PingFang_SC'] leading-snug">中的</div>
+                  <div className="flex-1 min-w-[80px] max-w-[120px] px-3 py-1 bg-white rounded-md outline outline-1 outline-offset-[-1px] outline-black/10 flex justify-start items-center gap-1">
+                    <div className="flex-1 py-px flex justify-start items-center overflow-hidden">
+                      <div className="justify-start text-zinc-800 text-sm font-normal font-['PingFang_SC'] leading-snug truncate">
+                        {firstColumnFieldName || 'PI订单号'}
+                      </div>
+                    </div>
+                    <div className="size-3 inline-flex flex-col justify-center items-center overflow-hidden shrink-0">
+                      <div className="size-3 relative overflow-hidden">
+                        <div className="size-1.5 left-[6.01px] top-[8.96px] absolute origin-top-left rotate-[-135deg] bg-black/10"></div>
+                      </div>
                     </div>
                   </div>
+                  <div className="justify-center text-neutral-800 text-sm font-medium font-['PingFang_SC'] leading-snug">字段</div>
                 </div>
-                <div className="justify-center text-neutral-800 text-sm font-medium font-['PingFang_SC'] leading-snug">中的</div>
-                <div className="flex-1 min-w-[80px] max-w-[120px] px-3 py-1 bg-white rounded-md outline outline-1 outline-offset-[-1px] outline-black/10 flex justify-start items-center gap-1">
-                  <div className="flex-1 py-px flex justify-start items-center overflow-hidden">
-                    <div className="justify-start text-zinc-800 text-sm font-normal font-['PingFang_SC'] leading-snug truncate">
-                      {firstColumnFieldName || 'PI订单号'}
+                <div className="w-full flex flex-wrap justify-start items-center gap-[5px]">
+                  <div className="justify-center text-neutral-800 text-sm font-medium font-['PingFang_SC'] leading-snug">内容是</div>
+                  <div className="flex-1 min-w-[180px] max-w-[280px] px-3 py-1 bg-white rounded-md outline outline-1 outline-offset-[-1px] outline-black/10 flex justify-start items-center gap-1">
+                    <div className="flex-1 py-px flex justify-start items-center overflow-hidden">
+                      <div className="justify-start text-zinc-800 text-sm font-normal font-['PingFang_SC'] leading-snug truncate">订单号，例如：IN20240404</div>
+                    </div>
+                    <div className="size-3 inline-flex flex-col justify-center items-center overflow-hidden shrink-0">
+                      <div className="size-3 relative overflow-hidden">
+                        <div className="size-1.5 left-[6.01px] top-[8.96px] absolute origin-top-left rotate-[-135deg] bg-black/10"></div>
+                      </div>
                     </div>
                   </div>
-                  <div className="size-3 inline-flex flex-col justify-center items-center overflow-hidden shrink-0">
-                    <div className="size-3 relative overflow-hidden">
-                      <div className="size-1.5 left-[6.01px] top-[8.96px] absolute origin-top-left rotate-[-135deg] bg-black/10"></div>
-                    </div>
-                  </div>
+                  <div className="justify-center text-neutral-800 text-base font-medium font-['PingFang_SC'] leading-normal">时，</div>
                 </div>
-                <div className="justify-center text-neutral-800 text-sm font-medium font-['PingFang_SC'] leading-snug">字段</div>
+                <div className="w-full flex justify-start text-neutral-800 text-sm font-medium font-['PingFang_SC'] leading-snug">将以下勾选的字段数据同步到表格中</div>
               </div>
-              <div className="w-full flex flex-wrap justify-start items-center gap-[5px]">
-                <div className="justify-center text-neutral-800 text-sm font-medium font-['PingFang_SC'] leading-snug">内容是</div>
-                <div className="flex-1 min-w-[180px] max-w-[280px] px-3 py-1 bg-white rounded-md outline outline-1 outline-offset-[-1px] outline-black/10 flex justify-start items-center gap-1">
-                  <div className="flex-1 py-px flex justify-start items-center overflow-hidden">
-                    <div className="justify-start text-zinc-800 text-sm font-normal font-['PingFang_SC'] leading-snug truncate">订单号，例如：IN20240404</div>
-                  </div>
-                  <div className="size-3 inline-flex flex-col justify-center items-center overflow-hidden shrink-0">
-                    <div className="size-3 relative overflow-hidden">
-                      <div className="size-1.5 left-[6.01px] top-[8.96px] absolute origin-top-left rotate-[-135deg] bg-black/10"></div>
-                    </div>
-                  </div>
-                </div>
-                <div className="justify-center text-neutral-800 text-base font-medium font-['PingFang_SC'] leading-normal">时，</div>
-              </div>
-              <div className="w-full flex justify-start text-neutral-800 text-sm font-medium font-['PingFang_SC'] leading-snug">将以下勾选的字段数据同步到表格中</div>
+            </div>
+
+            {/* 字段选择区域 */}
+            <div className="bg-white rounded-lg border border-[#e4e7ec] p-4">
+              <FieldsSection
+                fields={fields}
+                tableFields={tableFields}
+                onFieldChange={handleFieldChange}
+                onFieldMappingChange={handleFieldMappingChange}
+              />
             </div>
           </div>
-
-          {/* 字段选择区域 */}
-          <div className="bg-white rounded-lg border border-[#e4e7ec] p-6">
-            <FieldsSection
-              fields={fields}
-              tableFields={tableFields}
-              onFieldChange={handleFieldChange}
-              onFieldMappingChange={handleFieldMappingChange}
-            />
-          </div>
         </div>
-      </div>
 
-      {/* 底部区域 */}
-      <div className="bg-white border-t border-[#e4e7ec] px-6 py-4">
-        {fieldsConfigError && (
-          <div className="mb-3 text-xs text-[#f04438]">
-            ⚠️ 字段配置加载失败，使用默认配置
-          </div>
-        )}
-        <button
-          onClick={handleApply}
-          disabled={fields.filter(f => f.isChecked).length === 0 || fieldsConfigLoading}
-          className={cn(
-            "w-full h-11 text-white text-sm font-medium rounded-lg transition-colors",
-            fields.filter(f => f.isChecked).length === 0 || fieldsConfigLoading
-              ? "bg-[#d0d5dd] cursor-not-allowed"
-              : "bg-[#165dff] hover:bg-[#1570ef]"
+        {/* 底部区域 - 固定在底部 */}
+        <div className="bg-white border-t border-[#e4e7ec] px-6 py-4 flex-shrink-0">
+          {fieldsConfigError && (
+            <div className="mb-3 text-xs text-[#f04438]">
+              ⚠️ 字段配置加载失败，使用默认配置
+            </div>
           )}
-        >
-          {fieldsConfigLoading ? "加载中..." : "开始同步数据"}
-        </button>
+          <button
+            onClick={handleApply}
+            disabled={fields.filter(f => f.isChecked).length === 0 || fieldsConfigLoading}
+            className={cn(
+              "w-full h-11 text-white text-sm font-medium rounded-lg transition-colors",
+              fields.filter(f => f.isChecked).length === 0 || fieldsConfigLoading
+                ? "bg-[#d0d5dd] cursor-not-allowed"
+                : "bg-[#165dff] hover:bg-[#1570ef]"
+            )}
+          >
+            {fieldsConfigLoading ? "加载中..." : "开始同步数据"}
+          </button>
+        </div>
       </div>
     </div>
   );

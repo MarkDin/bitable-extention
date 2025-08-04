@@ -1,7 +1,5 @@
 import React from "react";
 import { useLocation } from "wouter";
-import InfoMessage from "./addLarkGroup";
-import { LoginStatusIndicator } from "./AuthGuard";
 
 interface PluginLayoutProps {
   children: React.ReactNode;
@@ -12,13 +10,10 @@ const PluginLayout: React.FC<PluginLayoutProps> = ({ children }) => {
 
   return (
     <div className="flex flex-col h-screen">
-      {/* Header */}
-      <InfoMessage />
-
       {/* Login Status Indicator */}
-      <div className="border-b bg-gray-50 px-4 py-2">
+      {/* <div className="border-b bg-gray-50 px-4 py-2">
         <LoginStatusIndicator />
-      </div>
+      </div> */}
 
       {/* Tab Navigation */}
       {/* <TabNavigation /> */}

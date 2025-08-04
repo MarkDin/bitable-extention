@@ -72,7 +72,7 @@ const FeishuQRLogin: React.FC<FeishuQRLoginProps> = ({
             const storedState = localStorage.getItem('feishu_auth_state');
             console.log('使用的state参数:', storedState);
 
-            const response = await fetch('http://localhost:8080/feishu/user_info?state=' + storedState, {
+            const response = await fetch('https://crm-data-service-dk1543100966.replit.app/feishu/user_info?state=' + storedState, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -180,7 +180,7 @@ const FeishuQRLogin: React.FC<FeishuQRLoginProps> = ({
 
             // 构建授权URL - 使用传入的配置
             const CLIENT_ID = config.clientId;
-            const REDIRECT_URI = "http://localhost:8080/auth/callback";
+            const REDIRECT_URI = "https://crm-data-service-dk1543100966.replit.app/auth/callback";
             const STATE = config.state || 'feishu_qr_' + Date.now();
 
             // 将state存储到localStorage中，以便后续验证
