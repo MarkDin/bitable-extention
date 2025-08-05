@@ -7,7 +7,7 @@ interface QueryConditionProps {
 
 const QueryCondition: React.FC<QueryConditionProps> = ({ tableName, firstColumnFieldName }) => {
     return (
-        <div className="bg-white rounded-lg border border-[#e4e7ec] p-4">
+        <div>
             <h2 className="text-sm font-medium text-[#344054] mb-3">配置查询条件</h2>
             <div className="p-2.5 bg-gray-100 rounded-lg outline outline-1 outline-offset-[-1px] outline-black/5 flex flex-col justify-center items-start gap-2.5 min-h-[8rem]">
                 <div className="w-full flex flex-wrap justify-start items-center gap-[5px]">

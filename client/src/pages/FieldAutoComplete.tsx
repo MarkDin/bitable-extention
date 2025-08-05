@@ -570,7 +570,7 @@ const FieldAutoComplete = () => {
 
   // 默认表单页面 - 修复底部置底问题
   return (
-    <div className="w-full h-full bg-[#f8f9fa] flex flex-col">
+    <div className="w-full h-full bg-white flex flex-col">
       {/* 帮助与反馈区域 */}
       <div className="bg-white px-6 py-4 flex-shrink-0 border-b border-[#e4e7ec]">
         <HelpAndFeedback />
@@ -583,14 +583,12 @@ const FieldAutoComplete = () => {
             <QueryCondition tableName={tableName} firstColumnFieldName={firstColumnFieldName} />
 
             {/* 字段选择区域 */}
-            <div className="bg-white rounded-lg border border-[#e4e7ec] p-4">
-              <FieldSelection
-                fields={fields}
-                tableFields={tableFields}
-                onFieldChange={handleFieldChange}
-                onFieldMappingChange={handleFieldMappingChange}
-              />
-            </div>
+            <FieldSelection
+              fields={fields}
+              tableFields={tableFields}
+              onFieldChange={handleFieldChange}
+              onFieldMappingChange={handleFieldMappingChange}
+            />
           </div>
         </div>
 
