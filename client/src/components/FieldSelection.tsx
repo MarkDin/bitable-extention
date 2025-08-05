@@ -292,10 +292,6 @@ const FieldCard: React.FC<{
                         >
                             {field.name}
                         </label>
-                        {/* 警告图标 */}
-                        {field.hasWarning && (
-                            <AlertTriangle className="h-4 w-4 text-[#f59e0b]" />
-                        )}
                     </div>
                 </div>
 
@@ -317,21 +313,6 @@ const FieldCard: React.FC<{
                 </div>
             )}
 
-            {/* 状态提示信息 */}
-            {(field.helperText || field.warningMessage) && (
-                <div className="mt-2 space-y-1">
-                    {field.helperText && (
-                        <div className="text-xs text-[#667085]">
-                            {field.helperText}
-                        </div>
-                    )}
-                    {field.warningMessage && (
-                        <div className="text-xs text-[#f59e0b]">
-                            {field.warningMessage}
-                        </div>
-                    )}
-                </div>
-            )}
         </div>
     );
 };

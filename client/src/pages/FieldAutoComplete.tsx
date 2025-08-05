@@ -213,8 +213,8 @@ const FieldAutoComplete = () => {
             targetFieldName: targetFieldExists ? savedFieldConfig.targetFieldName : undefined,
             mappingType: targetFieldExists ? savedFieldConfig.mappingType : 'new' as const,
             // 警告状态
-            hasWarning: field.name === '电话' || field.name.includes('电话'),
-            warningMessage: (field.name === '电话' || field.name.includes('电话')) ? '请注意检查你有表格编辑权限' : undefined
+            hasWarning: true,
+            warningMessage: '请注意检查你有表格编辑权限'
           };
         } else {
           // 没有保存配置，使用名称匹配（原逻辑）
@@ -232,8 +232,8 @@ const FieldAutoComplete = () => {
             targetFieldName: isExistingField ? existingField.name : undefined,
             mappingType: isExistingField ? 'existing' as const : 'new' as const,
             // 警告状态
-            hasWarning: field.name === '电话' || field.name.includes('电话'),
-            warningMessage: (field.name === '电话' || field.name.includes('电话')) ? '请注意检查你有表格编辑权限' : undefined
+            hasWarning: true,
+            warningMessage: '请注意检查你有表格编辑权限'
           };
         }
       });
@@ -594,6 +594,7 @@ const FieldAutoComplete = () => {
           </div>
         </div>
 
+        <div className="w-full px-6 mb-2 text-gray-500 text-sm font-normal font-['PingFang_SC'] leading-tight">💡 请注意检查你有表格编辑权限</div>
         {/* 底部区域 - 固定在底部 */}
         <ActionButtons
           onApply={handleApply}

@@ -63,7 +63,7 @@ const FeishuQRLogin: React.FC<FeishuQRLoginProps> = ({
             document.body.appendChild(iframe);
 
             // 等待callback处理完成（给后端一些时间处理）
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            await new Promise(resolve => setTimeout(resolve, 1000));
 
             // 清理iframe
             document.body.removeChild(iframe);
@@ -101,8 +101,8 @@ const FeishuQRLogin: React.FC<FeishuQRLoginProps> = ({
                     localStorage.setItem('feishu_access_token', token_info.access_token);
                     localStorage.setItem('feishu_refresh_token', token_info.refresh_token || '');
 
-                    // 计算token过期时间
-                    const expiresAt = Date.now() + (token_info.expires_in * 1000);
+                    // 计算token过期时间 - 设置为30天
+                    const expiresAt = Date.now() + (30 * 24 * 60 * 60 * 1000);
                     localStorage.setItem('feishu_token_expires_at', expiresAt.toString());
                 }
 
@@ -402,4 +402,3 @@ const FeishuQRLogin: React.FC<FeishuQRLoginProps> = ({
 };
 
 export default FeishuQRLogin;
-

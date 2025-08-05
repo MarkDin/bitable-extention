@@ -31,7 +31,7 @@ const HelpAndFeedback: React.FC = () => {
                 className="w-24 h-4 left-4 top-[46px] absolute cursor-pointer hover:opacity-80 transition-opacity"
                 onClick={() => {
                     // 这里可以添加打开使用手册的逻辑
-                    window.open('#', '_blank');
+                    window.open('https://global-intco.feishu.cn/docx/Nej2ddbQ8oqVTHxaZMgcNUx7nuf', '_blank');
                 }}
             >
                 <div data-svg-wrapper className="left-0 top-[2px] absolute">

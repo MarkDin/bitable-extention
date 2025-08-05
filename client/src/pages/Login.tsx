@@ -161,49 +161,7 @@ const Login: React.FC = () => {
         clearError();
     };
 
-    // 如果是回调路由，显示处理状态
-    // if (isCallbackRoute) {
-    //     return (
-    //         <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-    //             <Card className="w-full max-w-md">
-    //                 <CardHeader className="text-center">
-    //                     <CardTitle>处理登录信息</CardTitle>
-    //                 </CardHeader>
-    //                 <CardContent className="text-center space-y-4">
-    //                     {loginStatus === 'processing' && (
-    //                         <div className="space-y-4">
-    //                             <Loader2 className="w-12 h-12 animate-spin text-blue-500 mx-auto" />
-    //                             <p className="text-gray-600">正在从后端获取用户信息...</p>
-    //                         </div>
-    //                     )}
 
-    //                     {loginStatus === 'success' && (
-    //                         <div className="space-y-4">
-    //                             <CheckCircle className="w-12 h-12 text-green-500 mx-auto" />
-    //                             <div>
-    //                                 <p className="text-green-600 font-medium">登录成功！</p>
-    //                                 <p className="text-sm text-gray-500 mt-1">正在跳转到用户信息页面...</p>
-    //                             </div>
-    //                         </div>
-    //                     )}
-
-    //                     {loginStatus === 'error' && (
-    //                         <div className="space-y-4">
-    //                             <AlertCircle className="w-12 h-12 text-red-500 mx-auto" />
-    //                             <div>
-    //                                 <p className="text-red-600 font-medium">登录失败</p>
-    //                                 <p className="text-sm text-gray-500 mt-1">{errorMessage}</p>
-    //                             </div>
-    //                             <Button onClick={() => setLocation('/login')} className="w-full">
-    //                                 返回登录页
-    //                             </Button>
-    //                         </div>
-    //                     )}
-    //                 </CardContent>
-    //             </Card>
-    //         </div>
-    //     );
-    // }
 
     // 主登录页面
     return (

@@ -10,7 +10,7 @@ interface ActionButtonsProps {
 
 const ActionButtons: React.FC<ActionButtonsProps> = ({ onApply, isApplyDisabled, isLoading, hasError }) => {
   return (
-    <div className="bg-white border-t border-[#e4e7ec] px-6 py-4 flex-shrink-0">
+    <div className="bg-white  py-4 flex-shrink-0">
       {hasError && (
         <div className="mb-3 text-xs text-[#f04438]">
           ⚠️ 字段配置加载失败，使用默认配置
