@@ -211,7 +211,7 @@ const FieldMappingSelect: React.FC<{
     );
 };
 
-export const FieldsSection: React.FC<{
+export const FieldSelection: React.FC<{
     fields: Field[];
     tableFields: TableField[];
     onFieldChange: (id: string, checked: boolean) => void;
@@ -244,7 +244,7 @@ export const FieldsSection: React.FC<{
             </div>
 
             {/* 字段列表 */}
-            <div className="space-y-3 max-h-[400px] overflow-y-auto">
+            <div className="space-y-3">
                 {fields.map(field => (
                     <FieldCard
                         key={field.id}
@@ -345,4 +345,3 @@ const FieldTag: React.FC<{ type: string }> = ({ type }) => {
         </div>
     );
 };
-

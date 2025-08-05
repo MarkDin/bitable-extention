@@ -1,12 +1,12 @@
-import { FieldsSection } from "@/components/FieldSelection";
+import ActionButtons from "@/components/ActionButtons";
+import { FieldSelection } from "@/components/FieldSelection";
 import HelpAndFeedback from "@/components/HelpAndFeedback";
-import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
+import QueryCondition from "@/components/QueryCondition";
 import { useFeishuBase } from "@/hooks/use-feishu-base";
 import { useToast } from "@/hooks/use-toast";
 import { autoCompleteFields } from "@/lib/autoCompleteHelper";
 import { QueryType } from "@/lib/dataSync";
 import { getFieldsConfig } from "@/lib/fieldsConfigService";
-import { cn } from "@/lib/utils";
 import { Field, TableField, TableFieldConfig } from "@/types/common";
 import { bitable } from "@lark-base-open/js-sdk";
 import { useQuery } from "@tanstack/react-query";
@@ -52,84 +52,6 @@ const QUERY_TYPE_OPTIONS = [
 
 
 
-// 自定义Select组件以匹配Figma设计
-const CustomSelect: React.FC<{
-  value: string;
-  onValueChange: (value: string) => void;
-  placeholder?: string;
-  options: { value: string; label: string }[];
-  className?: string;
-}> = ({ value, onValueChange, placeholder, options, className }) => {
-
-  const selectedOption = options.find(opt => opt.value === value);
-
-  return (
-    <Select value={value} onValueChange={onValueChange}>
-      <SelectTrigger className={cn(
-        "bg-[#f2f3f5] border-0 h-[30px] px-3 py-1 rounded-sm",
-        "focus:ring-0 focus:ring-offset-0 hover:bg-[#e8e9eb]",
-        className
-      )}>
-        <span className={cn(
-          "text-sm font-normal",
-          selectedOption ? "text-[#1d2129]" : "text-[#c9cdd4]"
-        )}>
-          {selectedOption?.label || placeholder}
-        </span>
-      </SelectTrigger>
-      <SelectContent>
-        {options.map(option => (
-          <SelectItem key={option.value} value={option.value}>
-            {option.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
-};
-
-// 自定义Checkbox组件
-const CustomCheckbox: React.FC<{
-  id?: string;
-  checked: boolean;
-  onCheckedChange: (checked: boolean) => void;
-  disabled?: boolean;
-  indeterminate?: boolean;
-}> = ({ id, checked, onCheckedChange, disabled, indeterminate }) => {
-  return (
-    <button
-      id={id}
-      type="button"
-      role="checkbox"
-      aria-checked={indeterminate ? "mixed" : checked}
-      disabled={disabled}
-      onClick={() => !disabled && onCheckedChange(!checked)}
-      className={cn(
-        "h-3.5 w-3.5 rounded-sm relative flex items-center justify-center transition-colors shrink-0",
-        "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-        !checked && "bg-white border-2 border-[#e5e6eb]",
-        checked && !disabled && "bg-[#165dff] border-0",
-        checked && disabled && "bg-[#c9cdd4] border-0",
-        disabled && "cursor-not-allowed"
-      )}
-    >
-      {checked && !indeterminate && (
-        <svg className="h-2.5 w-2.5" viewBox="0 0 10 10" fill="none">
-          <path
-            d="M8.5 2.5L3.5 7.5L1.5 5.5"
-            stroke="white"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      )}
-      {indeterminate && (
-        <div className="h-0.5 w-1.5 bg-white rounded-[0.5px]" />
-      )}
-    </button>
-  );
-};
 
 
 const FieldAutoComplete = () => {
@@ -658,60 +580,11 @@ const FieldAutoComplete = () => {
       <div className="flex-1 flex flex-col min-h-0">
         <div className="flex-1 px-6 py-4 overflow-y-auto">
           <div className="space-y-4">
-            {/* 配置查询条件 - 精确匹配Figma设计 */}
-            <div className="bg-white rounded-lg border border-[#e4e7ec] p-4">
-              <h2 className="text-sm font-medium text-[#344054] mb-3">配置查询条件</h2>
-              <div className="p-2.5 bg-gray-100 rounded-lg outline outline-1 outline-offset-[-1px] outline-black/5 flex flex-col justify-center items-start gap-2.5 min-h-[8rem]">
-                <div className="w-full flex flex-wrap justify-start items-center gap-[5px]">
-                  <div className="justify-center text-neutral-800 text-sm font-medium font-['PingFang_SC'] leading-snug">当</div>
-                  <div className="flex-1 min-w-[140px] max-w-[200px] px-3 py-1 bg-white rounded-md outline outline-1 outline-offset-[-1px] outline-black/10 flex justify-start items-center gap-1.5">
-                    <div className="flex-1 py-px flex justify-start items-center overflow-hidden">
-                      <div className="justify-start text-zinc-800 text-sm font-normal font-['PingFang_SC'] leading-snug truncate">
-                        {tableName || '欧洲一区项目跟进表'}
-                      </div>
-                    </div>
-                    <div className="size-3 inline-flex flex-col justify-center items-center overflow-hidden shrink-0">
-                      <div className="size-3 relative overflow-hidden">
-                        <div className="size-1.5 left-[6.01px] top-[8.96px] absolute origin-top-left rotate-[-135deg] bg-black/10"></div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="justify-center text-neutral-800 text-sm font-medium font-['PingFang_SC'] leading-snug">中的</div>
-                  <div className="flex-1 min-w-[80px] max-w-[120px] px-3 py-1 bg-white rounded-md outline outline-1 outline-offset-[-1px] outline-black/10 flex justify-start items-center gap-1">
-                    <div className="flex-1 py-px flex justify-start items-center overflow-hidden">
-                      <div className="justify-start text-zinc-800 text-sm font-normal font-['PingFang_SC'] leading-snug truncate">
-                        {firstColumnFieldName || 'PI订单号'}
-                      </div>
-                    </div>
-                    <div className="size-3 inline-flex flex-col justify-center items-center overflow-hidden shrink-0">
-                      <div className="size-3 relative overflow-hidden">
-                        <div className="size-1.5 left-[6.01px] top-[8.96px] absolute origin-top-left rotate-[-135deg] bg-black/10"></div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="justify-center text-neutral-800 text-sm font-medium font-['PingFang_SC'] leading-snug">字段</div>
-                </div>
-                <div className="w-full flex flex-wrap justify-start items-center gap-[5px]">
-                  <div className="justify-center text-neutral-800 text-sm font-medium font-['PingFang_SC'] leading-snug">内容是</div>
-                  <div className="flex-1 min-w-[180px] max-w-[280px] px-3 py-1 bg-white rounded-md outline outline-1 outline-offset-[-1px] outline-black/10 flex justify-start items-center gap-1">
-                    <div className="flex-1 py-px flex justify-start items-center overflow-hidden">
-                      <div className="justify-start text-zinc-800 text-sm font-normal font-['PingFang_SC'] leading-snug truncate">订单号，例如：IN20240404</div>
-                    </div>
-                    <div className="size-3 inline-flex flex-col justify-center items-center overflow-hidden shrink-0">
-                      <div className="size-3 relative overflow-hidden">
-                        <div className="size-1.5 left-[6.01px] top-[8.96px] absolute origin-top-left rotate-[-135deg] bg-black/10"></div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="justify-center text-neutral-800 text-base font-medium font-['PingFang_SC'] leading-normal">时，</div>
-                </div>
-                <div className="w-full flex justify-start text-neutral-800 text-sm font-medium font-['PingFang_SC'] leading-snug">将以下勾选的字段数据同步到表格中</div>
-              </div>
-            </div>
+            <QueryCondition tableName={tableName} firstColumnFieldName={firstColumnFieldName} />
 
             {/* 字段选择区域 */}
             <div className="bg-white rounded-lg border border-[#e4e7ec] p-4">
-              <FieldsSection
+              <FieldSelection
                 fields={fields}
                 tableFields={tableFields}
                 onFieldChange={handleFieldChange}
@@ -722,25 +595,12 @@ const FieldAutoComplete = () => {
         </div>
 
         {/* 底部区域 - 固定在底部 */}
-        <div className="bg-white border-t border-[#e4e7ec] px-6 py-4 flex-shrink-0">
-          {fieldsConfigError && (
-            <div className="mb-3 text-xs text-[#f04438]">
-              ⚠️ 字段配置加载失败，使用默认配置
-            </div>
-          )}
-          <button
-            onClick={handleApply}
-            disabled={fields.filter(f => f.isChecked).length === 0 || fieldsConfigLoading}
-            className={cn(
-              "w-full h-11 text-white text-sm font-medium rounded-lg transition-colors",
-              fields.filter(f => f.isChecked).length === 0 || fieldsConfigLoading
-                ? "bg-[#d0d5dd] cursor-not-allowed"
-                : "bg-[#165dff] hover:bg-[#1570ef]"
-            )}
-          >
-            {fieldsConfigLoading ? "加载中..." : "开始同步数据"}
-          </button>
-        </div>
+        <ActionButtons
+          onApply={handleApply}
+          isApplyDisabled={fields.filter(f => f.isChecked).length === 0}
+          isLoading={fieldsConfigLoading}
+          hasError={!!fieldsConfigError}
+        />
       </div>
     </div>
   );
