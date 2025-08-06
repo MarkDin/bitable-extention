@@ -1,3 +1,4 @@
+import { isLoginEnabled } from '@/config';
 import { useFeishuAuth } from '@/hooks/useFeishuAuth';
 import { Loader2 } from 'lucide-react';
 import React from 'react';
@@ -38,11 +39,24 @@ const AuthGuard: React.FC<AuthGuardProps> = ({
         );
     }
 
-    // 如果需要认证但用户未登录，重定向到登录页
-    if (requireAuth && !isAuthenticated) {
-        console.log('用户未登录，重定向到登录页面');
-        setLocation(redirectTo);
-        return null;
+    // 如果启用了登录功能，则检查认证状态
+    if (isLoginEnabled) {
+        if (isLoading) {
+            return (
+                <div className="flex items-center justify-center min-h-screen">
+                    <div className="flex flex-col items-center gap-4">
+                        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                        <p className="text-gray-600">检查登录状态...</p>
+                    </div>
+                </div>
+            );
+        }
+
+        if (requireAuth && !isAuthenticated) {
+            console.log('用户未登录，重定向到登录页面');
+            setLocation(redirectTo);
+            return null;
+        }
     }
 
     // 如果不需要认证或者用户已登录，渲染子组件

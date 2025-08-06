@@ -35,7 +35,7 @@ interface OperationLog {
     bitableUrl: string;
     tableName: string;
     tableId: string;
-    user: {
+    user?: { // 用户信息变为可选
         id: string;
     };
 }
@@ -130,9 +130,12 @@ export async function sendOperationLogToFeishu(log: OperationLog): Promise<boole
                         [TEMPLATE_VARIABLES.END_TIME]: formatTime(log.endTime),             // 补全结束时间
                         [TEMPLATE_VARIABLES.COMPLETE_RESULT]: getCompleteResultText(log.completionResult), // 补全结果
                         [TEMPLATE_VARIABLES.DOC_LINK]: log.bitableUrl,                      // 多维表格链接
-                        [TEMPLATE_VARIABLES.USER_OPEN_ID]: {
-                            id: log.user.id,
-                        }                 // 用户Open ID
+                        // 根据是否存在用户信息来决定是否发送
+                        ...(log.user && {
+                            [TEMPLATE_VARIABLES.USER_OPEN_ID]: {
+                                id: log.user.id,
+                            }
+                        })
                     }
                 }
             }

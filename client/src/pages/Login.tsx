@@ -1,6 +1,7 @@
 import FeishuQRLogin from '@/components/FeishuQRLogin';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { isLoginEnabled } from '@/config';
 import { useToast } from '@/hooks/use-toast';
 import { useFeishuAuth } from '@/hooks/useFeishuAuth';
 import { AlertCircle, Loader2 } from 'lucide-react';
@@ -98,10 +99,16 @@ const Login: React.FC = () => {
     //     }
     // }, [login, setLocation, toast]);
 
-    // 如果已经登录，重定向到用户信息页面
+    // 如果已经登录或免登录模式，重定向到主页面
     useEffect(() => {
+        if (!isLoginEnabled) {
+            console.log('免登录模式，直接跳转到主页面');
+            setLocation('/auto-complete');
+            return;
+        }
+
         if (isAuthenticated) {
-            console.log('用户已登录，重定向到用户信息页面');
+            console.log('用户已登录，重定向到主页面');
             setLocation('/auto-complete');
         }
     }, [isAuthenticated, setLocation]);
@@ -246,4 +253,4 @@ const Login: React.FC = () => {
     );
 };
 
-export default Login; 
+export default Login;
