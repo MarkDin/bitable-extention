@@ -8,7 +8,20 @@ interface QueryConditionProps {
 const QueryCondition: React.FC<QueryConditionProps> = ({ tableName, firstColumnFieldName }) => {
     return (
         <div>
-            <h2 className="text-sm font-medium text-[#344054] mb-3">配置查询条件</h2>
+            <div className="bg-white inline-flex justify-start items-center gap-[3px] mb-[10px]">
+                <div className="size-4 relative overflow-hidden">
+                    <div className="w-0.5 h-0 left-[11.83px] top-[3.33px] absolute outline outline-1 outline-offset-[-0.50px] outline-zinc-800"></div>
+                    <div className="w-0 h-[2.67px] left-[9.17px] top-[2px] absolute outline outline-1 outline-offset-[-0.50px] outline-zinc-800"></div>
+                    <div className="w-2 h-0 left-[1.83px] top-[3.33px] absolute outline outline-1 outline-offset-[-0.50px] outline-zinc-800"></div>
+                    <div className="w-[2.67px] h-0 left-[1.83px] top-[8px] absolute outline outline-1 outline-offset-[-0.50px] outline-zinc-800"></div>
+                    <div className="w-0 h-[2.67px] left-[7.17px] top-[6.67px] absolute outline outline-1 outline-offset-[-0.50px] outline-zinc-800"></div>
+                    <div className="w-2 h-0 left-[7.17px] top-[8px] absolute outline outline-1 outline-offset-[-0.50px] outline-zinc-800"></div>
+                    <div className="w-0.5 h-0 left-[11.83px] top-[12.67px] absolute outline outline-1 outline-offset-[-0.50px] outline-zinc-800"></div>
+                    <div className="w-0 h-[2.67px] left-[9.17px] top-[11.33px] absolute outline outline-1 outline-offset-[-0.50px] outline-zinc-800"></div>
+                    <div className="w-2 h-0 left-[1.83px] top-[12.67px] absolute outline outline-1 outline-offset-[-0.50px] outline-zinc-800"></div>
+                </div>
+                <div className="justify-center text-black text-sm font-medium font-['PingFang_SC'] leading-snug">配置查询条件</div>
+            </div>
             <div className="p-2.5 bg-gray-100 rounded-lg outline outline-1 outline-offset-[-1px] outline-black/5 flex flex-col justify-center items-start gap-2.5 min-h-[8rem]">
                 <div className="w-full flex flex-wrap justify-start items-center gap-[5px]">
                     <div className="justify-center text-neutral-800 text-sm font-medium font-['PingFang_SC'] leading-snug">当</div>

@@ -1,22 +1,23 @@
 import { cn } from '@/lib/utils';
 import { Field, TableField } from "@/types/common";
-import { AlertTriangle, ChevronDown } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
-// 预定义颜色池 - 精心挑选的颜色组合
+// 预定义颜色池 - 使用Tailwind透明度语法
+// cardBg = bg/20 (20%透明度)，保持色系一致
 const COLOR_POOL = [
-    { bg: 'bg-[#f5e8ff]', text: 'text-[#722ed1]', cardBg: 'bg-[#f5e8ff]', cardBorder: 'border-[#722ed1]' }, // 紫色
-    { bg: 'bg-[#fff3e8]', text: 'text-[#ff8800]', cardBg: 'bg-[#fff3e8]', cardBorder: 'border-[#ff8800]' }, // 橙色
-    { bg: 'bg-[#e8f3ff]', text: 'text-[#165dff]', cardBg: 'bg-[#e8f3ff]', cardBorder: 'border-[#165dff]' }, // 蓝色
-    { bg: 'bg-[#e8ffea]', text: 'text-[#00d437]', cardBg: 'bg-[#e8ffea]', cardBorder: 'border-[#00d437]' }, // 绿色
-    { bg: 'bg-[#ffe8f1]', text: 'text-[#ff0066]', cardBg: 'bg-[#ffe8f1]', cardBorder: 'border-[#ff0066]' }, // 粉色
-    { bg: 'bg-[#e8fffb]', text: 'text-[#0fc6c2]', cardBg: 'bg-[#e8fffb]', cardBorder: 'border-[#0fc6c2]' }, // 青色
-    { bg: 'bg-[#fff8e8]', text: 'text-[#d48806]', cardBg: 'bg-[#fff8e8]', cardBorder: 'border-[#d48806]' }, // 金色
-    { bg: 'bg-[#f0e8ff]', text: 'text-[#9254de]', cardBg: 'bg-[#f0e8ff]', cardBorder: 'border-[#9254de]' }, // 淡紫色
-    { bg: 'bg-[#e8f5ff]', text: 'text-[#1890ff]', cardBg: 'bg-[#e8f5ff]', cardBorder: 'border-[#1890ff]' }, // 天蓝色
-    { bg: 'bg-[#e8fdf5]', text: 'text-[#13c2c2]', cardBg: 'bg-[#e8fdf5]', cardBorder: 'border-[#13c2c2]' }, // 薄荷绿
-    { bg: 'bg-[#fff2e8]', text: 'text-[#fa8c16]', cardBg: 'bg-[#fff2e8]', cardBorder: 'border-[#fa8c16]' }, // 暖橙色
-    { bg: 'bg-[#f9f0ff]', text: 'text-[#b37feb]', cardBg: 'bg-[#f9f0ff]', cardBorder: 'border-[#b37feb]' }, // 浅紫色
+    { bg: 'bg-purple-100', text: 'text-purple-700', cardBg: 'bg-purple-100/20', cardBorder: 'border-purple-700' }, // 紫色
+    { bg: 'bg-orange-100', text: 'text-orange-700', cardBg: 'bg-orange-100/20', cardBorder: 'border-orange-700' }, // 橙色
+    { bg: 'bg-blue-100', text: 'text-blue-700', cardBg: 'bg-blue-100/20', cardBorder: 'border-blue-700' }, // 蓝色
+    { bg: 'bg-green-100', text: 'text-green-700', cardBg: 'bg-green-100/20', cardBorder: 'border-green-700' }, // 绿色
+    { bg: 'bg-pink-100', text: 'text-pink-700', cardBg: 'bg-pink-100/20', cardBorder: 'border-pink-700' }, // 粉色
+    { bg: 'bg-cyan-100', text: 'text-cyan-700', cardBg: 'bg-cyan-100/20', cardBorder: 'border-cyan-700' }, // 青色
+    { bg: 'bg-yellow-100', text: 'text-yellow-700', cardBg: 'bg-yellow-100/20', cardBorder: 'border-yellow-700' }, // 金色
+    { bg: 'bg-violet-100', text: 'text-violet-700', cardBg: 'bg-violet-100/20', cardBorder: 'border-violet-700' }, // 淡紫色
+    { bg: 'bg-sky-100', text: 'text-sky-700', cardBg: 'bg-sky-100/20', cardBorder: 'border-sky-700' }, // 天蓝色
+    { bg: 'bg-teal-100', text: 'text-teal-700', cardBg: 'bg-teal-100/20', cardBorder: 'border-teal-700' }, // 薄荷绿
+    { bg: 'bg-amber-100', text: 'text-amber-700', cardBg: 'bg-amber-100/20', cardBorder: 'border-amber-700' }, // 暖橙色
+    { bg: 'bg-indigo-100', text: 'text-indigo-700', cardBg: 'bg-indigo-100/20', cardBorder: 'border-indigo-700' }, // 浅紫色
 ];
 
 // 字符串哈希函数 - 为相同字符串生成相同索引
@@ -31,6 +32,7 @@ const stringHash = (str: string): number => {
 // 获取字段标签样式和卡片样式
 const getFieldTagStyle = (type: string) => {
     // 已知类型的固定样式配置，包含卡片样式
+    // cardBg = bg/20 (20%透明度)，保持色系一致
     const knownTypes: Record<string, {
         bg: string;
         text: string;
@@ -38,46 +40,46 @@ const getFieldTagStyle = (type: string) => {
         cardBorder: string;
     }> = {
         'NC': {
-            bg: 'bg-[#f5e8ff]',
-            text: 'text-[#722ed1]',
-            cardBg: 'bg-[#f5e8ff]',
-            cardBorder: 'border-[#722ed1]'
+            bg: 'bg-purple-100',
+            text: 'text-purple-700',
+            cardBg: 'bg-purple-100/20',
+            cardBorder: 'border-purple-700'
         },
         'SMOM': {
-            bg: 'bg-[#fff3e8]',
-            text: 'text-[#ff8800]',
-            cardBg: 'bg-[#fff3e8]',
-            cardBorder: 'border-[#ff8800]'
+            bg: 'bg-orange-100',
+            text: 'text-orange-700',
+            cardBg: 'bg-orange-100/20',
+            cardBorder: 'border-orange-700'
         },
         'TMS': {
-            bg: 'bg-[#e8f3ff]',
-            text: 'text-[#165dff]',
-            cardBg: 'bg-[#e8f3ff]',
-            cardBorder: 'border-[#165dff]'
+            bg: 'bg-blue-100',
+            text: 'text-blue-700',
+            cardBg: 'bg-blue-100/20',
+            cardBorder: 'border-blue-700'
         },
         'CRM': {
-            bg: 'bg-[#e8ffea]',
-            text: 'text-[#00d437]',
-            cardBg: 'bg-[#e8ffea]',
-            cardBorder: 'border-[#00d437]'
+            bg: 'bg-green-100',
+            text: 'text-green-700',
+            cardBg: 'bg-green-100/20',
+            cardBorder: 'border-green-700'
         },
         'MRP': {
-            bg: 'bg-[#ffe8f1]',
-            text: 'text-[#ff0066]',
-            cardBg: 'bg-[#ffe8f1]',
-            cardBorder: 'border-[#ff0066]'
+            bg: 'bg-pink-100',
+            text: 'text-pink-700',
+            cardBg: 'bg-pink-100/20',
+            cardBorder: 'border-pink-700'
         },
         '赛意': {
-            bg: 'bg-[#e8fffb]',
-            text: 'text-[#0fc6c2]',
-            cardBg: 'bg-[#e8fffb]',
-            cardBorder: 'border-[#0fc6c2]'
+            bg: 'bg-cyan-100',
+            text: 'text-cyan-700',
+            cardBg: 'bg-cyan-100/20',
+            cardBorder: 'border-cyan-700'
         },
         '青蓝': {
-            bg: 'bg-[#e8fffb]',
-            text: 'text-[#0fc6c2]',
-            cardBg: 'bg-[#e8fffb]',
-            cardBorder: 'border-[#0fc6c2]'
+            bg: 'bg-cyan-100',
+            text: 'text-cyan-700',
+            cardBg: 'bg-cyan-100/20',
+            cardBorder: 'border-cyan-700'
         }
     };
 
@@ -148,6 +150,8 @@ const FieldMappingSelect: React.FC<{
         ? '新增列'
         : field.targetFieldName || '请选择字段';
 
+    const isNewColumn = field.mappingType === 'new';
+
     // 点击外部关闭下拉框
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -169,9 +173,13 @@ const FieldMappingSelect: React.FC<{
         <div ref={selectRef} className="relative w-full">
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-full h-8 px-3 py-1 bg-white border border-[#d0d5dd] rounded-md flex items-center justify-between text-sm text-[#344054] hover:border-[#98a2b3] transition-colors shadow-sm"
+                className="w-full h-8 px-3 py-1 bg-white border border-[#d0d5dd] rounded-md flex items-center justify-between text-sm hover:border-[#98a2b3] transition-colors shadow-sm"
             >
-                <span>{currentSelection}</span>
+                <span className={cn(
+                    isNewColumn ? "text-[#165dff]" : "text-[#344054]"
+                )}>
+                    {currentSelection}
+                </span>
                 <ChevronDown className={cn(
                     "h-4 w-4 text-[#667085] transition-transform",
                     isOpen && "rotate-180"
@@ -182,7 +190,7 @@ const FieldMappingSelect: React.FC<{
                 <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#d0d5dd] rounded-md shadow-lg z-20 max-h-40 overflow-y-auto">
                     <button
                         onClick={() => handleSelect(undefined, undefined, 'new')}
-                        className="w-full px-3 py-2 text-left text-sm text-[#344054] hover:bg-[#f9fafb] flex items-center gap-2 border-b border-[#f2f4f7]"
+                        className="w-full px-3 py-2 text-left text-sm text-[#165dff] hover:bg-[#f9fafb] flex items-center gap-2 border-b border-[#f2f4f7]"
                     >
                         <span className="text-[#165dff] font-bold">+</span>
                         新增列
@@ -271,7 +279,7 @@ const FieldCard: React.FC<{
 
     return (
         <div className={cn(
-            "border-2 rounded-md p-4 transition-all duration-200",
+            "border-1 rounded-md p-4 transition-all duration-200",
             field.isChecked
                 ? `${tagStyle.cardBg} ${tagStyle.cardBorder}` // 使用标签对应的卡片样式
                 : "border-[#e4e7ec] bg-white hover:border-[#d0d5dd]"
@@ -321,7 +329,7 @@ const FieldCard: React.FC<{
 const FieldTag: React.FC<{ type: string }> = ({ type }) => {
     const style = getFieldTagStyle(type);
     return (
-        <div className={cn('px-2 py-0.5 rounded text-xs font-medium', style.bg)}>
+        <div className={cn('px-2 py-0.5 rounded-[40px] text-xs font-medium', style.bg)}>
             <span className={style.text}>{type}</span>
         </div>
     );
