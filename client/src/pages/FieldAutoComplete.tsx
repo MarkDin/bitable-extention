@@ -92,7 +92,7 @@ const FieldAutoComplete = () => {
   // 表格配置管理函数
   const getTableConfigKey = (tableId: string) => `table_field_config_${tableId}`;
 
-  // 保存表格字段配置
+  // 保存表格字段配置到云存储（只在执行补全时调用）
   const saveTableFieldConfig = async (tableId: string, tableName: string, fields: Field[]) => {
     try {
       const config: TableFieldConfig = {
@@ -101,7 +101,7 @@ const FieldAutoComplete = () => {
         fieldConfigs: fields.map(field => ({
           fieldId: field.id,
           fieldName: field.name,
-          isChecked: field.isChecked,
+          isChecked: field.isChecked,  // 🔑 保存勾选状态（包括需要新建的字段）
           targetFieldId: field.targetFieldId,
           targetFieldName: field.targetFieldName,
           mappingType: field.mappingType || 'new'
@@ -112,13 +112,19 @@ const FieldAutoComplete = () => {
       const configKey = getTableConfigKey(tableId);
       await bitable.bridge.setData(configKey, JSON.stringify(config));
 
-      console.log('[FieldAutoComplete] 表格配置已保存:', { tableId, tableName, configCount: config.fieldConfigs.length });
+      console.log('[FieldAutoComplete] 表格配置已保存到云存储:', {
+        tableId,
+        tableName,
+        configCount: config.fieldConfigs.length,
+        checkedCount: config.fieldConfigs.filter(f => f.isChecked).length
+      });
     } catch (error) {
       console.error('[FieldAutoComplete] 保存表格配置失败:', error);
+      throw error; // 抛出错误让调用方处理
     }
   };
 
-  // 加载表格字段配置
+  // 加载表格字段配置（只在插件初始化时调用）
   const loadTableFieldConfig = async (tableId: string): Promise<TableFieldConfig | null> => {
     try {
       const configKey = getTableConfigKey(tableId);
@@ -126,11 +132,16 @@ const FieldAutoComplete = () => {
 
       if (configData && typeof configData === 'string') {
         const config: TableFieldConfig = JSON.parse(configData);
-        console.log('[FieldAutoComplete] 加载表格配置成功:', { tableId, configCount: config.fieldConfigs.length });
+        console.log('[FieldAutoComplete] 从云存储加载表格配置成功:', {
+          tableId,
+          configCount: config.fieldConfigs.length,
+          checkedCount: config.fieldConfigs.filter(f => f.isChecked).length,
+          lastUpdated: config.lastUpdated
+        });
         return config;
       }
 
-      console.log('[FieldAutoComplete] 没有找到表格配置:', tableId);
+      console.log('[FieldAutoComplete] 云存储中没有找到表格配置:', tableId);
       return null;
     } catch (error) {
       console.error('[FieldAutoComplete] 加载表格配置失败:', error);
@@ -180,18 +191,21 @@ const FieldAutoComplete = () => {
       const currentTableFields = await getTableFields(currentTableInstance);
       setTableFields(currentTableFields);
 
-      // 尝试加载保存的配置
+      // 尝试加载保存的配置（只在初始化时）
       const savedConfig = await loadTableFieldConfig(tableId);
 
-      // 创建字段名称映射（用于fallback）
+      // 创建字段映射
       const fieldNameMap = new Map<string, TableField>();
+      const fieldIdMap = new Map<string, TableField>();
       currentTableFields.forEach(field => {
         fieldNameMap.set(field.name, field);
+        fieldIdMap.set(field.id, field);
       });
 
-      console.log('[FieldAutoComplete] 表格ID:', tableId);
-      console.log('[FieldAutoComplete] 是否有保存配置:', !!savedConfig);
-      console.log('[FieldAutoComplete] 字段名称映射:', Array.from(fieldNameMap.keys()));
+      console.log('[FieldAutoComplete] 字段匹配开始');
+      console.log('[FieldAutoComplete] - 表格ID:', tableId);
+      console.log('[FieldAutoComplete] - 云存储配置:', savedConfig ? '有' : '无');
+      console.log('[FieldAutoComplete] - 当前表格字段数:', currentTableFields.length);
 
       // 更新字段状态，优先使用保存的配置
       return fieldsToMatch.map(field => {
@@ -200,38 +214,49 @@ const FieldAutoComplete = () => {
 
         if (savedFieldConfig) {
           // 使用保存的配置
-          console.log('[FieldAutoComplete] 使用保存配置:', savedFieldConfig.fieldName);
+          console.log(`[FieldAutoComplete] 字段 ${field.name}:`, {
+            '使用保存配置': true,
+            '勾选状态': savedFieldConfig.isChecked,
+            '映射类型': savedFieldConfig.mappingType
+          });
 
           // 验证目标字段是否仍然存在
           const targetFieldExists = savedFieldConfig.targetFieldId ?
-            currentTableFields.some(tf => tf.id === savedFieldConfig.targetFieldId) : false;
+            fieldIdMap.has(savedFieldConfig.targetFieldId) : false;
+
+          // 如果是映射到现有字段，但字段不存在了，需要改为新建
+          const actualMappingType = savedFieldConfig.mappingType === 'existing' && !targetFieldExists
+            ? 'new' as const
+            : savedFieldConfig.mappingType;
 
           return {
             ...field,
-            isChecked: savedFieldConfig.isChecked,
+            isChecked: savedFieldConfig.isChecked, // 🔑 恢复保存的勾选状态（包括需要新建的字段）
             targetFieldId: targetFieldExists ? savedFieldConfig.targetFieldId : undefined,
             targetFieldName: targetFieldExists ? savedFieldConfig.targetFieldName : undefined,
-            mappingType: targetFieldExists ? savedFieldConfig.mappingType : 'new' as const,
-            // 警告状态
+            mappingType: actualMappingType,
             hasWarning: true,
             warningMessage: '请注意检查你有表格编辑权限'
           };
         } else {
-          // 没有保存配置，使用名称匹配（原逻辑）
+          // 没有保存配置，使用名称匹配
           const existingField = fieldNameMap.get(field.name);
           const isExistingField = !!existingField;
 
-          console.log('[FieldAutoComplete] 使用名称匹配:', field.name, isExistingField ? '找到同名字段' : '无同名字段');
+          console.log(`[FieldAutoComplete] 字段 ${field.name}:`, {
+            '使用名称匹配': true,
+            '找到同名字段': isExistingField,
+            '默认勾选': isExistingField ? true : field.isChecked
+          });
 
           return {
             ...field,
-            isChecked: isExistingField ? true : field.isChecked,
+            isChecked: isExistingField ? true : field.isChecked, // 同名字段默认勾选，否则保持原状态
             isDisabled: false,
             helperText: isExistingField ? '已有同名字段' : undefined,
             targetFieldId: isExistingField ? existingField.id : undefined,
             targetFieldName: isExistingField ? existingField.name : undefined,
             mappingType: isExistingField ? 'existing' as const : 'new' as const,
-            // 警告状态
             hasWarning: true,
             warningMessage: '请注意检查你有表格编辑权限'
           };
@@ -248,11 +273,13 @@ const FieldAutoComplete = () => {
     if (fieldsConfigData && fieldsConfigData.length > 0) {
       console.log('[FieldAutoComplete] 字段配置加载完成，共', fieldsConfigData.length, '个字段');
 
-      // 如果当前有表格，立即进行字段匹配
+      // 如果当前有表格，立即进行字段匹配（包括恢复保存的勾选状态）
       if (currentTable) {
-        console.log('[FieldAutoComplete] 字段配置加载，开始匹配现有表格字段');
+        console.log('[FieldAutoComplete] 开始匹配现有表格字段并恢复勾选状态');
         matchExistingFields(fieldsConfigData, currentTable).then(matchedFields => {
-          console.log('[FieldAutoComplete] 初始字段匹配完成');
+          console.log('[FieldAutoComplete] 字段匹配完成，恢复的勾选状态:',
+            matchedFields.filter(f => f.isChecked).map(f => f.name)
+          );
           setFields(matchedFields);
         });
       } else {
@@ -371,16 +398,16 @@ const FieldAutoComplete = () => {
             console.log('[FieldAutoComplete] A列字段ID:', firstFieldId, '字段名称:', firstFieldName);
           }
 
-          // 如果已有字段配置，进行字段匹配
+          // 如果已有字段配置，进行字段匹配（包括恢复保存的勾选状态）
           if (fields.length > 0) {
-            console.log('[FieldAutoComplete] 开始匹配表格字段，字段数量:', fields.length);
+            console.log('[FieldAutoComplete] 表格切换，开始匹配字段并恢复配置，字段数量:', fields.length);
             const matchedFields = await matchExistingFields(fields, table);
-            console.log('[FieldAutoComplete] 字段匹配完成，结果:', matchedFields.map(f => ({
-              name: f.name,
-              isChecked: f.isChecked,
-              mappingType: f.mappingType,
-              targetFieldName: f.targetFieldName
-            })));
+            console.log('[FieldAutoComplete] 字段匹配完成:', {
+              '总字段数': matchedFields.length,
+              '勾选字段': matchedFields.filter(f => f.isChecked).map(f => f.name),
+              '需要新建': matchedFields.filter(f => f.isChecked && f.mappingType === 'new').map(f => f.name),
+              '映射到现有': matchedFields.filter(f => f.isChecked && f.mappingType === 'existing').map(f => f.name)
+            });
             setFields(matchedFields);
           }
         } else {
@@ -436,15 +463,22 @@ const FieldAutoComplete = () => {
         return;
       }
 
-      // 保存当前表格的字段配置
+      // 🔑 关键：在执行补全时保存完整的字段配置（包括勾选状态）
       if (currentTableId && tableName) {
         console.log('[FieldAutoComplete] 保存表格配置，表格ID:', currentTableId);
-        await saveTableFieldConfig(currentTableId, tableName, fields);
+        console.log('[FieldAutoComplete] 保存的字段配置:', fields.map(f => ({
+          name: f.name,
+          isChecked: f.isChecked,
+          mappingType: f.mappingType
+        })));
 
-        toast({
-          title: "配置已保存",
-          description: "当前表格的字段配置已保存，下次打开时将自动应用。",
-        });
+        try {
+          await saveTableFieldConfig(currentTableId, tableName, fields);
+          console.log('[FieldAutoComplete] 配置保存成功，下次打开将恢复勾选状态');
+        } catch (error) {
+          console.error('[FieldAutoComplete] 配置保存失败，但继续执行补全:', error);
+          // 保存失败不阻止补全操作，只是记录错误
+        }
       }
 
       // 切换到进度页面
@@ -459,9 +493,52 @@ const FieldAutoComplete = () => {
         onProgress: (completed, total) => {
           setProgressData({ completed, total });
         },
-        onComplete: (result) => {
+        onComplete: async (result) => {
           setCompletionResult(result);
           setPageState('result');
+
+          // 🔑 关键：处理新创建的字段，更新映射关系并保存配置
+          if (result.newlyCreatedFields && result.newlyCreatedFields.length > 0) {
+            console.log('[FieldAutoComplete] 检测到新创建的字段，开始更新映射关系');
+
+            // 更新字段映射关系
+            const updatedFields = fields.map(field => {
+              const newlyCreated = result.newlyCreatedFields?.find(
+                nf => nf.originalFieldId === field.id
+              );
+
+              if (newlyCreated) {
+                console.log(`[FieldAutoComplete] 更新字段映射: ${field.name} -> ${newlyCreated.fieldId}`);
+                return {
+                  ...field,
+                  targetFieldId: newlyCreated.fieldId,
+                  targetFieldName: newlyCreated.fieldName,
+                  mappingType: 'existing' as const // 从 'new' 改为 'existing'
+                };
+              }
+
+              return field;
+            });
+
+            // 更新本地状态
+            setFields(updatedFields);
+
+            // 保存更新后的配置到云端
+            if (currentTableId && tableName) {
+              try {
+                await saveTableFieldConfig(currentTableId, tableName, updatedFields);
+                console.log('[FieldAutoComplete] 新字段映射关系已保存到云端');
+
+                toast({
+                  title: "配置已更新",
+                  description: `${result.newlyCreatedFields.length} 个新字段的映射关系已更新并保存`,
+                  duration: 3000
+                });
+              } catch (error) {
+                console.error('[FieldAutoComplete] 保存新字段映射失败:', error);
+              }
+            }
+          }
         },
         onOperationLog: (log) => {
           // 处理操作日志

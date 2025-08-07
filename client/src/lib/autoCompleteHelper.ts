@@ -38,6 +38,11 @@ interface AutoCompleteParams {
     errorCount: number;
     unchangedCount: number;
     fieldCreationErrors?: string[]; // 字段创建错误信息
+    newlyCreatedFields?: Array<{ // 新增：新创建的字段信息
+      fieldId: string;
+      fieldName: string;
+      originalFieldId: string; // 原始字段配置的ID
+    }>;
   }) => void;
   onOperationLog?: (log: OperationLog) => void; // 新增：操作日志回调
 }
@@ -133,7 +138,8 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
         successCount: 0,
         errorCount: 0,
         unchangedCount: recordIdList.length,
-        fieldCreationErrors: []
+        fieldCreationErrors: [],
+        newlyCreatedFields: []
       };
 
       // 完成操作日志
@@ -163,9 +169,11 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
       fieldCreationConfig
     );
 
-    // 收集本次新建的字段ID
+    // 收集本次新建的字段信息
     const newlyCreatedFieldIds = new Set<string>();
-    if (results) {
+    const newlyCreatedFieldsInfo: Array<{ fieldId: string; fieldName: string; originalFieldId: string }> = [];
+
+    if (results && results.length > 0) {
       // 重新获取字段列表，找到新创建的字段
       const updatedFields = await activeTable.getFieldMetaList();
       const fieldNameToId = Object.fromEntries(updatedFields.map(f => [f.name, f.id]));
@@ -175,6 +183,17 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
           const fieldId = fieldNameToId[result.fieldName];
           if (fieldId) {
             newlyCreatedFieldIds.add(fieldId);
+
+            // 找到对应的原始字段配置
+            const originalField = selectedFields.find(f => f.name === result.fieldName);
+            if (originalField) {
+              newlyCreatedFieldsInfo.push({
+                fieldId: fieldId,
+                fieldName: result.fieldName,
+                originalFieldId: originalField.id
+              });
+              console.log(`[AutoComplete] 新创建字段映射: ${result.fieldName} -> ${fieldId}`);
+            }
           }
         }
       }
@@ -207,7 +226,8 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
             successCount: 0,
             errorCount: 0,
             unchangedCount: 0,
-            fieldCreationErrors
+            fieldCreationErrors,
+            newlyCreatedFields: []
           };
 
           // 完成操作日志
@@ -272,7 +292,8 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
         successCount: 0,
         errorCount: 0,
         unchangedCount: recordIdList.length,
-        fieldCreationErrors: []
+        fieldCreationErrors: [],
+        newlyCreatedFields: newlyCreatedFieldsInfo
       };
 
       // 完成操作日志
@@ -598,7 +619,8 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
         successCount: 0,
         errorCount: recordIdList.length,
         unchangedCount: 0,
-        fieldCreationErrors: fieldCreationErrors.length > 0 ? fieldCreationErrors : []
+        fieldCreationErrors: fieldCreationErrors.length > 0 ? fieldCreationErrors : [],
+        newlyCreatedFields: newlyCreatedFieldsInfo
       };
 
       const finalLog: OperationLog = {
@@ -641,7 +663,8 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
       successCount,
       errorCount,
       unchangedCount,
-      fieldCreationErrors: fieldCreationErrors.length > 0 ? fieldCreationErrors : []
+      fieldCreationErrors: fieldCreationErrors.length > 0 ? fieldCreationErrors : [],
+      newlyCreatedFields: newlyCreatedFieldsInfo
     };
 
     // 记录结束时间并完成操作日志
@@ -672,7 +695,8 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
       successCount: 0,
       errorCount: 1,
       unchangedCount: 0,
-      fieldCreationErrors: []
+      fieldCreationErrors: [],
+      newlyCreatedFields: []
     };
 
     // 完成操作日志
