@@ -208,7 +208,7 @@ const FieldAutoComplete = () => {
       console.log('[FieldAutoComplete] - 当前表格字段数:', currentTableFields.length);
 
       // 更新字段状态，优先使用保存的配置
-      return fieldsToMatch.map(field => {
+      const matchedFields = fieldsToMatch.map(field => {
         // 首先查找保存的配置
         const savedFieldConfig = savedConfig?.fieldConfigs.find(fc => fc.fieldId === field.id);
 
@@ -262,6 +262,18 @@ const FieldAutoComplete = () => {
           };
         }
       });
+
+      // 确保返回的字段保持多维表格的原始顺序
+      const sortedMatchedFields = matchedFields.sort((a, b) => {
+        const idA = parseInt(a.originalId) || 0;
+        const idB = parseInt(b.originalId) || 0;
+        return idA - idB;
+      });
+
+      console.log('[FieldAutoComplete] 字段匹配完成，保持原始顺序:', 
+        sortedMatchedFields.map(f => `${f.name}(${f.originalId})`));
+
+      return sortedMatchedFields;
     } catch (error) {
       console.error('[FieldAutoComplete] 匹配字段失败:', error);
       return fieldsToMatch;
@@ -400,7 +412,7 @@ const FieldAutoComplete = () => {
 
           // 如果已有字段配置，进行字段匹配（包括恢复保存的勾选状态）
           if (fields.length > 0) {
-            console.log('[FieldAutoComplete] 表格切换，开始匹配字段并恢复配置，字段数量:', fields.length);
+            console.log('[FieldAutoComplete] 表格切换，开始匹配字段并恢复勾选状态，字段数量:', fields.length);
             const matchedFields = await matchExistingFields(fields, table);
             console.log('[FieldAutoComplete] 字段匹配完成:', {
               '总字段数': matchedFields.length,
