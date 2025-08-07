@@ -110,9 +110,19 @@ async function fetchFieldsFromBitable(): Promise<Field[]> {
                 mapping_field: record.mapping_field,
                 type: record.type,
                 isChecked: record.isChecked || false, // 保持后端设置或默认false
-                isDisabled: record.isDisabled || false // 保持后端设置或默认false
+                isDisabled: record.isDisabled || false, // 保持后端设置或默认false
+                originalId: record.id // 保留原始的多维表格id用于排序
             }))
-            .filter((field: Field) => field.name && field.mapping_field); // 过滤掉无效记录
+            .filter((field: Field) => field.name && field.mapping_field) // 过滤掉无效记录
+            .sort((a, b) => {
+                // 按照多维表格中的id字段进行排序
+                const idA = parseInt(a.originalId) || 0;
+                const idB = parseInt(b.originalId) || 0;
+                return idA - idB;
+            });
+
+        console.log(`[FieldsConfigService] 字段已按多维表格顺序排序，原始ID顺序:`, 
+            fields.map(f => `${f.name}(${f.originalId})`));
 
         return fields;
     } catch (error) {

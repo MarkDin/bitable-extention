@@ -13,6 +13,7 @@ export interface Field {
     // 警告状态
     hasWarning?: boolean; // 是否有警告
     warningMessage?: string; // 警告信息
+    originalId?: string; // 多维表格中的原始ID，用于排序
 }
 
 // 表格字段接口
