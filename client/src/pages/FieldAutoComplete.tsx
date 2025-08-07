@@ -263,17 +263,17 @@ const FieldAutoComplete = () => {
         }
       });
 
-      // 确保返回的字段保持多维表格的原始顺序
-      const sortedMatchedFields = matchedFields.sort((a, b) => {
-        const idA = parseInt(a.originalId) || 0;
-        const idB = parseInt(b.originalId) || 0;
-        return idA - idB;
-      });
+      // // 确保返回的字段保持多维表格的原始顺序
+      // const sortedMatchedFields = matchedFields.sort((a, b) => {
+      //   const idA = parseInt(a.originalId) || 0;
+      //   const idB = parseInt(b.originalId) || 0;
+      //   return idA - idB;
+      // });
 
-      console.log('[FieldAutoComplete] 字段匹配完成，保持原始顺序:', 
-        sortedMatchedFields.map(f => `${f.name}(${f.originalId})`));
+      // console.log('[FieldAutoComplete] 字段匹配完成，保持原始顺序:', 
+      //   sortedMatchedFields.map(f => `${f.name}(${f.originalId})`));
 
-      return sortedMatchedFields;
+      return matchedFields;
     } catch (error) {
       console.error('[FieldAutoComplete] 匹配字段失败:', error);
       return fieldsToMatch;
