@@ -5,4 +5,4 @@
  * - true: 必须登录才能使用应用
  * - false: 无需登录即可使用，用于开发和调试
  */
-export const isLoginEnabled = false;
+export const isLoginEnabled = true;

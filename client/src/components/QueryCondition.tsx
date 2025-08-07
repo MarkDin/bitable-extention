@@ -33,7 +33,7 @@ const QueryCondition: React.FC<QueryConditionProps> = ({ tableName, firstColumnF
                         </div>
                         <div className="size-3 inline-flex flex-col justify-center items-center overflow-hidden shrink-0">
                             <div className="size-3 relative overflow-hidden">
-                                <div className="size-1.5 left-[6.01px] top-[8.96px] absolute origin-top-left rotate-[-135deg] bg-black/10"></div>
+                                {/* <div className="size-1.5 left-[6.01px] top-[8.96px] absolute origin-top-left rotate-[-135deg] bg-black/10"></div> */}
                             </div>
                         </div>
                     </div>
@@ -46,7 +46,7 @@ const QueryCondition: React.FC<QueryConditionProps> = ({ tableName, firstColumnF
                         </div>
                         <div className="size-3 inline-flex flex-col justify-center items-center overflow-hidden shrink-0">
                             <div className="size-3 relative overflow-hidden">
-                                <div className="size-1.5 left-[6.01px] top-[8.96px] absolute origin-top-left rotate-[-135deg] bg-black/10"></div>
+                                {/* <div className="size-1.5 left-[6.01px] top-[8.96px] absolute origin-top-left rotate-[-135deg] bg-black/10"></div> */}
                             </div>
                         </div>
                     </div>
@@ -60,7 +60,7 @@ const QueryCondition: React.FC<QueryConditionProps> = ({ tableName, firstColumnF
                         </div>
                         <div className="size-3 inline-flex flex-col justify-center items-center overflow-hidden shrink-0">
                             <div className="size-3 relative overflow-hidden">
-                                <div className="size-1.5 left-[6.01px] top-[8.96px] absolute origin-top-left rotate-[-135deg] bg-black/10"></div>
+                                {/* <div className="size-1.5 left-[6.01px] top-[8.96px] absolute origin-top-left rotate-[-135deg] bg-black/10"></div> */}
                             </div>
                         </div>
                     </div>
