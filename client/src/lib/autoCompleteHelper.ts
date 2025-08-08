@@ -411,7 +411,11 @@ export async function autoCompleteFields(params: AutoCompleteParams) {
 
             // 处理每个选中的字段
             for (const field of selectedFields) {
-              const fieldId = fieldNameToId[field.name];
+              // 优先使用映射到的现有列ID；否则回退到按表头名匹配
+              const mappedFieldId = (field.mappingType === 'existing' && field.targetFieldId)
+                ? field.targetFieldId
+                : undefined;
+              const fieldId = mappedFieldId || fieldNameToId[field.name];
               if (!fieldId || fieldId === queryFieldId) continue; // 跳过查询字段本身
 
               let newValue: any = rowMap[field.mapping_field]?.value;

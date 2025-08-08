@@ -661,7 +661,7 @@ const FieldAutoComplete = () => {
   return (
     <div className="w-full h-full bg-white flex flex-col">
       {/* 帮助与反馈区域 */}
-      <div className="bg-white px-6 py-4 flex-shrink-0 border-b ">
+      <div className="bg-white px-6 py-4 flex-shrink-0 border-b flex items-start">
         <HelpAndFeedback />
       </div>
 

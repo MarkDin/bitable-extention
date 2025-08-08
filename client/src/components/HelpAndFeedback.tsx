@@ -8,18 +8,18 @@ const HelpAndFeedback: React.FC = () => {
     return (
         <div className="self-stretch h-16 relative">
 
-            {/* 标题区域 */}
-            <div className="left-1 top-[11px] absolute inline-flex justify-start items-center gap-[3px]">
-                {/* 问号图标 */}
-                <div data-svg-wrapper className="relative">
-                    <svg width="16" height="17" viewBox="0 0 16 17" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M8.00004 15.1668C9.84097 15.1668 11.5076 14.4206 12.7141 13.2142C13.9205 12.0078 14.6667 10.3411 14.6667 8.50016C14.6667 6.65923 13.9205 4.99256 12.7141 3.78612C11.5076 2.57969 9.84097 1.8335 8.00004 1.8335C6.15911 1.8335 4.49244 2.57969 3.28599 3.78612C2.07957 4.99256 1.33337 6.65923 1.33337 8.50016C1.33337 10.3411 2.07957 12.0078 3.28599 13.2142C4.49244 14.4206 6.15911 15.1668 8.00004 15.1668Z" stroke="#333333" strokeLinejoin="round" />
-                        <path d="M8 10.0418V8.7085C9.10457 8.7085 10 7.81306 10 6.7085C10 5.60393 9.10457 4.7085 8 4.7085C6.89543 4.7085 6 5.60393 6 6.7085" stroke="#333333" strokeLinecap="round" strokeLinejoin="round" />
-                        <path fillRule="evenodd" clipRule="evenodd" d="M7.99996 13.0417C8.46019 13.0417 8.83329 12.6686 8.83329 12.2083C8.83329 11.7481 8.46019 11.375 7.99996 11.375C7.53973 11.375 7.16663 11.7481 7.16663 12.2083C7.16663 12.6686 7.53973 13.0417 7.99996 13.0417Z" fill="#333333" />
+            {/* 标题区域（像素级对齐：统一24px行高与16px图标尺寸） */}
+            <div className="left-1 top-[11px] absolute inline-flex items-center gap-2 h-6">
+                {/* 问号图标（16x16）*/}
+                <div data-svg-wrapper className="relative flex items-center justify-center w-4 h-4">
+                    <svg width="16" height="16" viewBox="0 0 16 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M8.00004 15.1668C9.84097 15.1668 11.5076 14.4206 12.7141 13.2142C13.9205 12.0078 14.6667 10.3411 14.6667 8.50016C14.6667 6.65923 13.9205 4.99256 12.7141 3.78612C11.5076 2.57969 9.84097 1.8335 8.00004 1.8335C6.15911 1.8335 4.49244 2.57969 3.28599 3.78612C2.07957 4.99256 1.33337 6.65923 1.33337 8.50016C1.33337 10.3411 2.07957 12.0078 3.28599 13.2142C4.49244 14.4206 6.15911 15.1668 8.00004 15.1668Z" stroke="#626784" strokeLinejoin="round" />
+                        <path d="M8 10.0418V8.7085C9.10457 8.7085 10 7.81306 10 6.7085C10 5.60393 9.10457 4.7085 8 4.7085C6.89543 4.7085 6 5.60393 6 6.7085" stroke="#626784" strokeLinecap="round" strokeLinejoin="round" />
+                        <path fillRule="evenodd" clipRule="evenodd" d="M7.99996 13.0417C8.46019 13.0417 8.83329 12.6686 8.83329 12.2083C8.83329 11.7481 8.46019 11.375 7.99996 11.375C7.53973 11.375 7.16663 11.7481 7.16663 12.2083C7.16663 12.6686 7.53973 13.0417 7.99996 13.0417Z" fill="#626784" />
                     </svg>
                 </div>
-                {/* 标题文字 */}
-                <div className="w-72 h-6 justify-center text-black text-sm font-medium font-['PingFang_SC'] leading-snug">
+                {/* 标题文字（24px 行高确保与容器居中）*/}
+                <div className="w-72 h-6 text-black text-sm font-medium font-['PingFang_SC'] leading-6">
                     帮助与反馈
                 </div>
             </div>

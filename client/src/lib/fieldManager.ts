@@ -101,7 +101,7 @@ export async function createSingleField(
                     retryAttempts: attempt
                 };
             }
-            
+
 
             // 如果还有重试机会，等待后继续
             if (attempt <= maxRetries) {
@@ -176,8 +176,21 @@ export async function ensureFieldsExist(
         const allFields = await activeTable.getFieldMetaList();
         const existingFieldNames = allFields.map(f => f.name);
 
-        // 2. 找出需要新建的字段
-        const fieldsToCreate = selectedFields.filter(f => !existingFieldNames.includes(f.name));
+        // 2. 找出需要新建的字段（尊重映射到现有列的配置）
+        const existingFieldIds = allFields.map(f => f.id);
+        const fieldsToCreate = selectedFields.filter(f => {
+            // 如果映射到现有列，且目标列存在，则不创建
+            if (f.mappingType === 'existing') {
+                if ((f.targetFieldId && existingFieldIds.includes(f.targetFieldId)) ||
+                    (f.targetFieldName && existingFieldNames.includes(f.targetFieldName))) {
+                    return false;
+                }
+                // 已显式选择映射到现有列，但未找到目标时，不主动新建，交由后续写入阶段回退处理
+                return false;
+            }
+            // 默认：仅当表中不存在同名列时才创建
+            return !existingFieldNames.includes(f.name);
+        });
         console.log(`[FieldManager] 需要新建 ${fieldsToCreate.length} 个字段:`, fieldsToCreate.map(f => f.name));
 
         if (fieldsToCreate.length === 0) {
