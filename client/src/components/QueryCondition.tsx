@@ -66,7 +66,7 @@ const QueryCondition: React.FC<QueryConditionProps> = ({ tableName, firstColumnF
                     </div>
                     <div className="justify-center text-neutral-800 text-base font-medium font-['PingFang_SC'] leading-normal">时，</div>
                 </div>
-                <div className="w-full flex justify-start text-neutral-800 text-sm font-medium font-['PingFang_SC'] leading-snug">将以下勾选的字段数据同步到表格中</div>
+                <div className="w-full flex justify-start text-neutral-800 text-sm font-medium font-['PingFang_SC'] leading-snug">将根据订单号查询以下勾选的字段并同步到数据表中</div>
             </div>
         </div>
     );

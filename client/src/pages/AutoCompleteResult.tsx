@@ -63,60 +63,64 @@ const AutoCompleteResult: React.FC<AutoCompleteResultProps> = ({
     const statusConfig = getStatusConfig();
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-gray-50">
-            <div className="w-full max-w-md">
+        <div className="min-h-screen bg-gray-50">
+            <div className="w-full max-w-md mx-auto min-h-screen flex flex-col">
+                {/* 内容区域：可滚动 */}
+                <div className="flex-1 px-6 py-6 overflow-y-auto">
+                    {/* 插图区域 */}
+                    <div className="flex justify-center mb-8">
+                        <div className={`w-48 h-48 ${statusConfig.bgColor} rounded-lg flex items-center justify-center`}>
+                            {statusConfig.icon}
+                        </div>
+                    </div>
 
-                {/* 插图区域 */}
-                <div className="flex justify-center mb-8">
-                    <div className={`w-48 h-48 ${statusConfig.bgColor} rounded-lg flex items-center justify-center`}>
-                        {statusConfig.icon}
+                    {/* 结果文案 */}
+                    <div className="text-center">
+                        <p className={`text-lg font-medium ${statusConfig.color}`}>
+                            {statusConfig.message}
+                        </p>
+
+                        {/* 统计信息 */}
+                        {(successCount > 0 || errorCount > 0 || unchangedCount > 0) && (
+                            <div className="mt-4 text-sm text-gray-600 space-y-1">
+                                {successCount > 0 && (
+                                    <div>成功更新: {successCount} 条</div>
+                                )}
+                                {unchangedCount > 0 && (
+                                    <div>无变化: {unchangedCount} 条</div>
+                                )}
+                                {errorCount > 0 && (
+                                    <div className="text-red-500 font-bold">失败: {errorCount} 条</div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* 字段创建错误信息 */}
+                        {fieldCreationErrors.length > 0 && (
+                            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                                <div className="text-sm font-medium text-red-800 mb-2">字段创建失败:</div>
+                                <div className="text-xs text-red-700 space-y-1">
+                                    {fieldCreationErrors.map((error, index) => (
+                                        <div key={index} className="flex items-start">
+                                            <span className="text-red-500 mr-1">•</span>
+                                            <span>{error}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 
-                {/* 结果文案 */}
-                <div className="text-center mb-8">
-                    <p className={`text-lg font-medium ${statusConfig.color}`}>
-                        {statusConfig.message}
-                    </p>
-
-                    {/* 统计信息 */}
-                    {(successCount > 0 || errorCount > 0 || unchangedCount > 0) && (
-                        <div className="mt-4 text-sm text-gray-600 space-y-1">
-                            {successCount > 0 && (
-                                <div>成功更新: {successCount} 条</div>
-                            )}
-                            {unchangedCount > 0 && (
-                                <div>无变化: {unchangedCount} 条</div>
-                            )}
-                            {errorCount > 0 && (
-                                <div className="text-red-500 font-bold">失败: {errorCount} 条</div>
-                            )}
-                        </div>
-                    )}
-
-                    {/* 字段创建错误信息 */}
-                    {fieldCreationErrors.length > 0 && (
-                        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
-                            <div className="text-sm font-medium text-red-800 mb-2">字段创建失败:</div>
-                            <div className="text-xs text-red-700 space-y-1">
-                                {fieldCreationErrors.map((error, index) => (
-                                    <div key={index} className="flex items-start">
-                                        <span className="text-red-500 mr-1">•</span>
-                                        <span>{error}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
+                {/* 底部操作区：粘底，间距与上方一致 */}
+                <div className="sticky bottom-0 bg-white px-6 py-4 border-t">
+                    <Button
+                        onClick={onReturn}
+                        className="w-full bg-blue-500 hover:bg-blue-600 text-white"
+                    >
+                        返回
+                    </Button>
                 </div>
-
-                {/* 返回按钮 */}
-                <Button
-                    onClick={onReturn}
-                    className="w-full bg-blue-500 hover:bg-blue-600 text-white"
-                >
-                    返回
-                </Button>
             </div>
         </div>
     );

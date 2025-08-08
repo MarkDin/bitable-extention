@@ -279,10 +279,11 @@ const FieldCard: React.FC<{
 
     return (
         <div className={cn(
-            "border-1 rounded-md p-4 transition-all duration-200",
-            field.isChecked
-                ? `${tagStyle.cardBg} ${tagStyle.cardBorder}` // 使用标签对应的卡片样式
-                : "border-[#e4e7ec] bg-white hover:border-[#d0d5dd]"
+            "rounded-lg p-4 transition-all duration-200",
+            // 无论是否勾选，都展示与类型一致的背景和边框
+            tagStyle.cardBg,
+            "border",
+            tagStyle.cardBorder
         )}>
             <div className="flex items-center justify-between">
                 {/* 左侧：复选框和字段名 */}

@@ -681,7 +681,7 @@ const FieldAutoComplete = () => {
           </div>
         </div>
 
-        <div className="w-full px-6 mb-2 text-gray-500 text-sm font-normal font-['PingFang_SC'] leading-tight">💡 请注意检查你有表格编辑权限</div>
+        <div className="w-full px-6 mb-2 text-center text-gray-500 text-sm font-normal font-['PingFang_SC'] leading-tight">💡 请注意检查你有表格编辑权限</div>
         {/* 底部区域 - 固定在底部 */}
         <ActionButtons
           onApply={handleApply}
