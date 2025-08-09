@@ -136,8 +136,9 @@ const CustomCheckbox: React.FC<{
 const FieldMappingSelect: React.FC<{
     field: Field;
     tableFields: TableField[];
+    allFields: Field[]; // 新增：所有字段，用于检查哪些表格字段已被占用
     onMappingChange: (fieldId: string, targetFieldId?: string, targetFieldName?: string, mappingType?: 'existing' | 'new') => void;
-}> = ({ field, tableFields, onMappingChange }) => {
+}> = ({ field, tableFields, allFields, onMappingChange }) => {
     const [isOpen, setIsOpen] = useState(false);
     const selectRef = useRef<HTMLDivElement>(null);
 
@@ -151,6 +152,18 @@ const FieldMappingSelect: React.FC<{
         : field.targetFieldName || '请选择字段';
 
     const isNewColumn = field.mappingType === 'new';
+
+    // 获取已被其他字段占用的表格字段ID集合
+    const occupiedFieldIds = new Set(
+        allFields
+            .filter(f => f.id !== field.id && f.isChecked && f.targetFieldId && f.mappingType === 'existing')
+            .map(f => f.targetFieldId)
+    );
+
+    // 过滤出可用的表格字段（未被其他字段占用的）
+    const availableTableFields = tableFields.filter(
+        tf => !occupiedFieldIds.has(tf.id) || tf.id === field.targetFieldId // 当前字段自己选中的不过滤
+    );
 
     // 点击外部关闭下拉框
     useEffect(() => {
@@ -195,8 +208,8 @@ const FieldMappingSelect: React.FC<{
                         <span className="text-[#165dff] font-bold">+</span>
                         新增列
                     </button>
-                    {tableFields && tableFields.length > 0 ? (
-                        tableFields.map(tableField => (
+                    {availableTableFields && availableTableFields.length > 0 ? (
+                        availableTableFields.map(tableField => (
                             <button
                                 key={tableField.id}
                                 onClick={() => handleSelect(tableField.id, tableField.name, 'existing')}
@@ -258,6 +271,7 @@ export const FieldSelection: React.FC<{
                         key={field.id}
                         field={field}
                         tableFields={tableFields}
+                        allFields={fields}
                         onCheckedChange={(checked) => onFieldChange(field.id, checked)}
                         onMappingChange={onFieldMappingChange}
                     />
@@ -271,9 +285,10 @@ export const FieldSelection: React.FC<{
 const FieldCard: React.FC<{
     field: Field;
     tableFields: TableField[];
+    allFields: Field[]; // 新增：所有字段，用于传递给FieldMappingSelect
     onCheckedChange: (checked: boolean) => void;
     onMappingChange: (fieldId: string, targetFieldId?: string, targetFieldName?: string, mappingType?: 'existing' | 'new') => void;
-}> = ({ field, tableFields, onCheckedChange, onMappingChange }) => {
+}> = ({ field, tableFields, allFields, onCheckedChange, onMappingChange }) => {
     // 获取字段标签样式，用于卡片边框和背景
     const tagStyle = getFieldTagStyle(field.type);
 
@@ -317,6 +332,7 @@ const FieldCard: React.FC<{
                     <FieldMappingSelect
                         field={field}
                         tableFields={tableFields}
+                        allFields={allFields}
                         onMappingChange={onMappingChange}
                     />
                 </div>

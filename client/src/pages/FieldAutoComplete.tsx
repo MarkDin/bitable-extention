@@ -8,7 +8,7 @@ import { autoCompleteFields } from "@/lib/autoCompleteHelper";
 import { QueryType } from "@/lib/dataSync";
 import { getFieldsConfig } from "@/lib/fieldsConfigService";
 import { Field, TableField, TableFieldConfig } from "@/types/common";
-import { bitable } from "@lark-base-open/js-sdk";
+import { bitable, IField, IFieldMeta, ITable } from "@lark-base-open/js-sdk";
 import { useQuery } from "@tanstack/react-query";
 
 import { useEffect, useState } from "react";
@@ -149,27 +149,51 @@ const FieldAutoComplete = () => {
     }
   };
 
-  // 获取表格字段列表
-  const getTableFields = async (currentTableInstance: any): Promise<TableField[]> => {
+  // 获取表格字段列表（有序）
+  const getTableFields = async (currentTableInstance: ITable): Promise<TableField[]> => {
     try {
       if (!currentTableInstance) return [];
 
-      const allFields = await currentTableInstance.getFieldList();
+      // 获取当前视图以获取有序的字段列表
+      const viewList = await currentTableInstance.getViewList();
+      if (!viewList || viewList.length === 0) {
+        console.warn('[FieldAutoComplete] 未找到视图，使用无序字段列表');
+        // 如果没有视图，回退到使用无序的字段列表
+        const allFields: IField[] = await currentTableInstance.getFieldList<IField>();
+        const tableFieldsList: TableField[] = [];
+
+        for (const field of allFields) {
+          const fieldName = await field.getName();
+          const fieldType = await field.getType();
+
+          tableFieldsList.push({
+            id: field.id,
+            name: fieldName,
+            type: String(fieldType) // 转换为字符串
+          });
+        }
+        return tableFieldsList;
+      }
+
+      // 使用当前视图获取有序字段
+      const currentView = await currentTableInstance.getActiveView();
+      const fieldMetaList: IFieldMeta[] = await currentView.getFieldMetaList();
+      console.log('[FieldAutoComplete] 有序字段元数据:', fieldMetaList);
+
       const tableFieldsList: TableField[] = [];
 
-      for (const field of allFields) {
-        const fieldName = await field.getName();
-        const fieldType = await field.getType();
-        // const fieldId = await field.getId();
-
+      // 使用有序的字段ID列表构建字段信息
+      for (let i = 0; i < fieldMetaList.length; i++) {
+        if (i === 0) continue; // 跳过第一个字段
+        const fieldMeta = fieldMetaList[i];
         tableFieldsList.push({
-          id: field.id,
-          name: fieldName,
-          type: fieldType
+          id: fieldMeta.id,
+          name: fieldMeta.name,
+          type: String(fieldMeta.type) // 转换为字符串
         });
       }
 
-      console.log('[FieldAutoComplete] 当前表格字段:', tableFieldsList);
+      console.log('[FieldAutoComplete] 当前表格字段（有序）:', tableFieldsList);
       console.log('[FieldAutoComplete] 表格字段数量:', tableFieldsList.length);
       return tableFieldsList;
     } catch (error) {
@@ -681,7 +705,7 @@ const FieldAutoComplete = () => {
           </div>
         </div>
 
-        <div className="w-full px-6 mb-2 text-center text-gray-500 text-sm font-normal font-['PingFang_SC'] leading-tight">💡 请注意检查你有表格编辑权限</div>
+        <div className="w-full px-6 mb-1 text-center text-gray-500 text-sm font-normal font-['PingFang_SC'] leading-tight">💡 请注意检查你有表格编辑权限</div>
         {/* 底部区域 - 固定在底部 */}
         <ActionButtons
           onApply={handleApply}
